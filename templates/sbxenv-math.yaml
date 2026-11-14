@@ -1,0 +1,19 @@
+schemaVersion: "1"
+name: math-labs-workspace
+agent: antigravity
+workspace: .
+
+sandboxOptions:
+  template: ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+  memory: 8gb
+  cpus: 4
+
+kits:
+  - path: ./kits/math-labs
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+# Exposed Ports (bind to 0.0.0.0 inside the container)
+# ports:
+#   - "8888:8888" # Jupyter Lab / Notebook server

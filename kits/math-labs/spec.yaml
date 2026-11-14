@@ -1,0 +1,44 @@
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
+kind: mixin
+displayName: Math Labs & Scientific Computing
+description: Python scientific stack with Jupyter, NumPy, SciPy, Matplotlib, SymPy, and Pandas
+
+metadata:
+  version: "1.0.0"
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - "pypi.org"
+          - "files.pythonhosted.org"
+
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command: |
+            set -e
+            venv="$HOME/.venv"
+            if [ ! -d "$venv" ]; then
+              uv venv "$venv"
+              "$venv/bin/pip" install jupyterlab numpy scipy matplotlib pandas sympy ipykernel
+              "$venv/bin/python" -m ipykernel install --user --name math-labs --display-name "Python (Math Labs)"
+              if [ -w "/etc/sandbox-persistent.sh" ]; then
+                echo "export PATH=\"$venv/bin:\$PATH\"" >> /etc/sandbox-persistent.sh
+                echo "export VIRTUAL_ENV=\"$venv\"" >> /etc/sandbox-persistent.sh
+              fi
+              echo "export PATH=\"$venv/bin:\$PATH\"" >> "$HOME/.bashrc"
+              echo "export VIRTUAL_ENV=\"$venv\"" >> "$HOME/.bashrc"
+            fi
+          user: "1000"
+          description: Initialize scientific Python environment and Jupyter kernel
+
+  - type: com.docker.sandbox/agent-context@2
+    config:
+      content: |
+        This workspace includes a pre-configured scientific Python environment (NumPy, SciPy, Matplotlib, SymPy, Pandas, Jupyter).
+        - Python virtualenv is located at ~/.venv and registered with the Jupyter kernel 'math-labs'.
+        - When running notebooks or scientific scripts, use '~/.venv/bin/python' or ensure ~/.venv/bin is in PATH.

@@ -1,0 +1,15 @@
+schemaVersion: "1"
+name: rpi-edge-workspace
+agent: antigravity
+workspace: .
+
+sandboxOptions:
+  template: ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+  memory: 8gb
+  cpus: 4
+
+kits:
+  - path: ./kits/rpi-edge-node
+
+env:
+  ANSIBLE_FORCE_COLOR: "1"

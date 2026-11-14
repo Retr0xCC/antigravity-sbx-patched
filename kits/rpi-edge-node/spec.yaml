@@ -1,0 +1,42 @@
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
+kind: mixin
+displayName: Raspberry Pi & Edge Node Automation
+description: Edge infrastructure automation toolkit with Ansible, ansible-lint, yamllint, and Go
+
+metadata:
+  version: "1.0.0"
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - "galaxy.ansible.com"
+          - "github.com"
+          - "proxy.golang.org"
+          - "pypi.org"
+          - "files.pythonhosted.org"
+
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command: |
+            set -e
+            if ! command -v ansible >/dev/null 2>&1; then
+              uv tool install ansible-core
+              uv tool install ansible-lint
+              uv tool install yamllint
+              ansible-galaxy collection install community.general
+            fi
+          user: "1000"
+          description: Provision Ansible and Edge automation toolchain
+
+  - type: com.docker.sandbox/agent-context@2
+    config:
+      content: |
+        This workspace includes an Ansible & Edge infrastructure toolchain.
+        - Ansible tools (ansible, ansible-playbook, ansible-lint, yamllint) are installed in ~/.local/bin.
+        - The 'community.general' collection is pre-installed.
+        - When testing playbooks or syntax, run 'ansible-lint' and 'yamllint' before execution.
