@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - path: ./kits/rpi-edge-node
+  - ./kits/rpi-edge-node
 
 env:
   ANSIBLE_FORCE_COLOR: "1"

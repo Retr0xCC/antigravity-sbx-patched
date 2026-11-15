@@ -128,7 +128,7 @@ cd /path/to/my-project
 
 # 3. Adjust kit paths in sbxenv.yaml if needed:
 #    kits:
-#      - path: /path/to/antigravity-sbx-patched/kits/math-labs
+#      - /path/to/antigravity-sbx-patched/kits/math-labs
 
 # 4. Launch sandbox
 sbx env run

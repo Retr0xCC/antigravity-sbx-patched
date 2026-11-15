@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - path: ./kits/math-labs
+  - ./kits/math-labs
 
 env:
   PYTHONUNBUFFERED: "1"

@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - path: ./kits/affine-mcp
+  - ./kits/affine-mcp
 
 env:
   NODE_ENV: "production"

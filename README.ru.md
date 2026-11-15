@@ -128,7 +128,7 @@ cd /path/to/my-project
 
 # 3. При необходимости скорректируйте пути к kits в sbxenv.yaml:
 #    kits:
-#      - path: /path/to/antigravity-sbx-patched/kits/math-labs
+#      - /path/to/antigravity-sbx-patched/kits/math-labs
 
 # 4. Запуск песочницы
 sbx env run

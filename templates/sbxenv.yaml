@@ -22,9 +22,9 @@ sandboxOptions:
 
 # Attached Mixin Kits (paths relative to where sbxenv.yaml is executed, or absolute paths)
 kits:
-  # - path: ./kits/math-labs
-  # - path: ./kits/rpi-edge-node
-  # - path: ./kits/affine-mcp
+  # - ./kits/math-labs
+  # - ./kits/rpi-edge-node
+  # - ./kits/affine-mcp
 
 # Environment Variables
 env:
