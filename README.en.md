@@ -54,8 +54,7 @@ Downstream build directly from `sbx/antigravity-image:latest` with strict patch 
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 ```
 
-* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) builds and pushes to GHCR.
-* **Codeberg Actions**: [.forgejo/workflows/build-and-publish.yml](.forgejo/workflows/build-and-publish.yml) builds and pushes to `codeberg.org`.
+* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) builds and automatically publishes the image to GHCR (and syncs to Codeberg Registry when `CODEBERG_TOKEN` secret is configured).
 
 ---
 

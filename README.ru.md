@@ -54,8 +54,7 @@ docker run -it --rm \
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 ```
 
-* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) собирает и публикует образ в GHCR.
-* **Codeberg Actions**: [.forgejo/workflows/build-and-publish.yml](.forgejo/workflows/build-and-publish.yml) публикует образ в `codeberg.org`.
+* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) собирает образ и автоматически публикует его в GHCR (а при настройке секрета `CODEBERG_TOKEN` — синхронно пушит и в реестр Codeberg).
 
 ---
 
