@@ -126,24 +126,29 @@ cd /path/to/my-project
 
 # 2. Настройте GEMINI_API_KEY в файле .env (если требуется)
 
-# 3. При необходимости скорректируйте пути к kits в sbxenv.yaml:
-#    kits:
-#      - /path/to/antigravity-sbx-patched/kits/math-labs
-
-# 4. Запуск песочницы
+# 3. Запуск песочницы (все образы и киты автоматически подтягиваются из GHCR)
 sbx env run
+```
+
+По умолчанию в шаблонах подключены опубликованные киты (`ghcr.io/retr0xcc/...-kit:latest`). При необходимости использовать локальную копию кита укажите путь:
+```yaml
+kits:
+  - ./kits/math-labs
 ```
 
 ### 2.2. Подключение Kits на лету
 
-При запуске базового кита агента можно на лету подключать mixin-киты с помощью флага `--kit`:
+При запуске песочницы можно на лету подключать mixin-киты с помощью флага `--kit`:
 
 ```bash
-# Подключение отдельного набора инструментов
-sbx run ./kits/antigravity --kit ./kits/math-labs
+# Быстрый запуск агента shell с пропатченным Antigravity и mixin-китом
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest
 
 # Подключение нескольких наборов одновременно
-sbx run ./kits/antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 ```
 
 ---

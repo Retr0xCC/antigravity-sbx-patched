@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - ./kits/rpi-edge-node
+  - ghcr.io/retr0xcc/rpi-edge-node-kit:latest
 
 env:
   ANSIBLE_FORCE_COLOR: "1"

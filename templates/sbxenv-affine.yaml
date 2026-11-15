@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - ./kits/affine-mcp
+  - ghcr.io/retr0xcc/affine-mcp-kit:latest
 
 env:
   NODE_ENV: "production"

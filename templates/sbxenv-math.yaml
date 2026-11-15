@@ -9,7 +9,7 @@ sandboxOptions:
   cpus: 4
 
 kits:
-  - ./kits/math-labs
+  - ghcr.io/retr0xcc/math-labs-kit:latest
 
 env:
   PYTHONUNBUFFERED: "1"

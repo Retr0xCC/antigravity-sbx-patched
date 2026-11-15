@@ -7,7 +7,7 @@
 # agent name. Inside the container, 'agy' is pre-installed and patched.
 # For full agent capabilities (Gemini proxy credentials, Google network
 # allowlist, and startup hooks), run the kit directly:
-#   sbx run ./kits/antigravity
+#   sbx run ghcr.io/retr0xcc/antigravity-kit:latest
 # ========================================================
 schemaVersion: "1"
 name: workspace
@@ -20,11 +20,11 @@ sandboxOptions:
   memory: 8gb
   cpus: 4
 
-# Attached Mixin Kits (paths relative to where sbxenv.yaml is executed, or absolute paths)
+# Attached Mixin Kits (OCI images from GHCR or local paths)
 kits:
-  # - ./kits/math-labs
-  # - ./kits/rpi-edge-node
-  # - ./kits/affine-mcp
+  # - ghcr.io/retr0xcc/math-labs-kit:latest
+  # - ghcr.io/retr0xcc/rpi-edge-node-kit:latest
+  # - ghcr.io/retr0xcc/affine-mcp-kit:latest
 
 # Environment Variables
 env:

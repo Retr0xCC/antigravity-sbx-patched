@@ -126,24 +126,29 @@ cd /path/to/my-project
 
 # 2. Configure GEMINI_API_KEY in .env if needed
 
-# 3. Adjust kit paths in sbxenv.yaml if needed:
-#    kits:
-#      - /path/to/antigravity-sbx-patched/kits/math-labs
-
-# 4. Launch sandbox
+# 3. Launch sandbox (all container images and kits are pulled automatically from GHCR)
 sbx env run
+```
+
+By default, templates reference published kits (`ghcr.io/retr0xcc/...-kit:latest`). If you want to use a local kit copy, specify the path:
+```yaml
+kits:
+  - ./kits/math-labs
 ```
 
 ### 2.2. Attaching Kits Dynamically
 
-When launching the base agent kit, you can dynamically stack mixin kits using `--kit`:
+When launching a sandbox, you can dynamically stack mixin kits using `--kit`:
 
 ```bash
-# Attach specific toolchain
-sbx run ./kits/antigravity --kit ./kits/math-labs
+# Launch shell agent with patched Antigravity and mixin kit
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest
 
 # Stack multiple kits
-sbx run ./kits/antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 ```
 
 ---
