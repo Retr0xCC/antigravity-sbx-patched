@@ -2,7 +2,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
 schemaVersion: "3"
 kind: mixin
-name: media-operator
 displayName: Media Pipeline & Library Operator
 description: Autonomous media classification, Jellyfin/Plex structure planning, and AV1/HEVC transcode plan generator.
 version: "1.0.0"
