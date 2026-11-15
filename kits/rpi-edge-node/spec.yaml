@@ -5,8 +5,7 @@ kind: mixin
 displayName: Raspberry Pi & Edge Node Automation
 description: Edge infrastructure automation toolkit with Ansible, ansible-lint, yamllint, and Go
 
-metadata:
-  version: "1.0.0"
+version: "1.0.0"
 
 capabilities:
   - type: com.docker.sandbox/network-policy@1

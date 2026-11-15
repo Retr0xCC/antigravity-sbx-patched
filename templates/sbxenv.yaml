@@ -2,19 +2,25 @@
 # Docker Sandbox Declarative Environment Specification (sbxenv.yaml)
 # Run with: sbx env run
 # Plan with: sbx env plan
+#
+# NOTE: 'agent: shell' is used because Docker SBX requires a built-in
+# agent name. Inside the container, 'agy' is pre-installed and patched.
+# For full agent capabilities (Gemini proxy credentials, Google network
+# allowlist, and startup hooks), run the kit directly:
+#   sbx run ./kits/antigravity
 # ========================================================
 schemaVersion: "1"
 name: workspace
-agent: antigravity
+agent: shell
 workspace: .
 
 sandboxOptions:
   # Base image built with Antigravity CLI and pre-applied QNIX patch
-  template: ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+  template: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
   memory: 8gb
   cpus: 4
 
-# Attached Mixin Kits (uncomment desired toolchains)
+# Attached Mixin Kits (paths relative to where sbxenv.yaml is executed, or absolute paths)
 kits:
   # - path: ./kits/math-labs
   # - path: ./kits/rpi-edge-node
@@ -24,6 +30,7 @@ kits:
 env:
   PYTHONUNBUFFERED: "1"
   AGY_CLI_DISABLE_AUTO_UPDATE: "true"
+  GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
 
 # Exposed Ports (bind to 0.0.0.0 inside the container)
 # ports:

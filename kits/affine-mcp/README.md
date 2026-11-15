@@ -14,7 +14,7 @@ This Kit enables **Model Context Protocol (MCP)** integration between **Antigrav
 
 1. **Attach the Kit to an SBX sandbox:**
    ```bash
-   sbx run antigravity --kit ./kits/affine-mcp
+   sbx run ./kits/antigravity --kit ./kits/affine-mcp
    ```
    *(Or add `./kits/affine-mcp` to the `kits` section in your `sbxenv.yaml`)*
 
@@ -43,7 +43,7 @@ This Kit enables **Model Context Protocol (MCP)** integration between **Antigrav
 
 1. **Подключение кита в SBX:**
    ```bash
-   sbx run antigravity --kit ./kits/affine-mcp
+   sbx run ./kits/antigravity --kit ./kits/affine-mcp
    ```
    *(Или укажите `./kits/affine-mcp` в блоке `kits` вашего `sbxenv.yaml`)*
 

@@ -7,7 +7,7 @@ displayName: Google Antigravity (Patched)
 description: Google's agent-first development platform, available as the agy terminal coding agent with QNIX eligibility patch pre-baked.
 
 sandbox:
-  image: ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+  image: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
   entrypoint:
     - agy
   command:

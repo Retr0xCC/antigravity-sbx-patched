@@ -22,13 +22,39 @@
 
 ### 1.2. Быстрый запуск
 
-Образ автоматически публикуется в **GitHub Packages (GHCR)**:
+Артефакты автоматически публикуются в **GitHub Packages (GHCR)**:
 
-* `ghcr.io/Retr0xCC/antigravity-sbx-patched:latest`
+* **Контейнерный образ**: `ghcr.io/retr0xcc/antigravity-sbx-patched:latest`
+* **Sandbox Kit (OCI-артефакт)**: `ghcr.io/retr0xcc/antigravity-kit:latest`
 
 #### В Docker Sandboxes (SBX)
+
+##### Вариант А. Через опубликованный кит (без клонирования репозитория)
+Downstream-кит опубликован в GHCR и автоматически ссылается на пропатченный образ `antigravity-sbx-patched`.
+
+> **Важно**: По умолчанию Docker Sandboxes разрешает загрузку китов только из `docker.io/` и `dhi.io/`. Чтобы разрешить скачивание китов из GHCR, выполните на хосте один раз:
+> ```bash
+> sbx settings set kit.allowedSources '["docker.io/","dhi.io/","ghcr.io/retr0xcc/"]'
+> ```
+
 ```bash
-sbx run antigravity --template ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+# Создание песочницы для проекта
+sbx create --name my-sandbox "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/my-project
+
+# Запуск созданной песочницы
+sbx start -a my-sandbox
+
+# Или быстрый запуск на лету в текущей папке:
+sbx run "ghcr.io/retr0xcc/antigravity-kit:latest"
+```
+
+##### Вариант Б. Через локальный кит из репозитория
+```bash
+# Запуск с конфигурацией по умолчанию из spec.yaml
+sbx run ./kits/antigravity
+
+# Или создание песочницы с привязкой воркспейса
+sbx create --name my-sandbox "./kits/antigravity" /path/to/my-project
 ```
 
 #### В обычном Docker
@@ -36,7 +62,7 @@ sbx run antigravity --template ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
 docker run -it --rm \
   -v "$(pwd):/home/agent/workspace" \
   -w /home/agent/workspace \
-  ghcr.io/Retr0xCC/antigravity-sbx-patched:latest bash
+  ghcr.io/retr0xcc/antigravity-sbx-patched:latest bash
 ```
 
 ---
@@ -57,42 +83,67 @@ docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 
 ---
 
-## ЧАСТЬ 2. Шаблоны и Kits (Опционально)
+## ЧАСТЬ 2. Шаблоны
+
+Предусмотрено два варианта запуска:
+
+1. **Kit** — запуск через `sbx run ./kits/antigravity` (или через опубликованный кит `ghcr.io/retr0xcc/antigravity-kit:latest`). Использует спецификацию `kits/antigravity/spec.yaml`, обеспечивая:
+   * Сетевой allowlist (доступ к сервисам Google, OAuth, Generative Language API, Antigravity, GitHub).
+   * Проброс учетных данных (`GEMINI_API_KEY`) через защищенный proxyManaged с инъекцией заголовка `x-goog-api-key`.
+   * Startup-хуки (автоконфигурация `settings.json` и регистрация MCP Gateway).
+   * Точку входа: запуск `agy --dangerously-skip-permissions`.
+
+2. **Env** — запуск через `sbx env run` с использованием `sbxenv.yaml`. Использует встроенный агент `agent: shell` и образ контейнера. Подходит для интерактивной командной строки с ручным управлением сессией `agy`.
 
 ```text
 antigravity-sbx-patched/
 ├── templates/                   # Декларативные шаблоны окружений (sbxenv)
-│   ├── sbxenv.yaml              # Базовый шаблон
+│   ├── sbxenv.yaml              # Базовый шаблон (agent: shell)
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, линтеры
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
-│   └── .env.example             # Переменные окружения
+│   └── .env.example             # Переменные окружения (GEMINI_API_KEY)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
-    ├── antigravity/             # Базовый агент Antigravity
-    ├── math-labs/               # Научные вычисления
-    ├── rpi-edge-node/           # Edge-автоматизация
-    └── affine-mcp/              # MCP-сервер AFFiNE
+    ├── antigravity/             # Базовый агент Antigravity (kind: sandbox)
+    ├── math-labs/               # Научные вычисления (kind: mixin)
+    ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin)
+    └── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin)
 ```
 
 ### 2.1. Использование шаблонов (`sbxenv.yaml`)
 
+> [!WARNING]
+> **Не копируйте `sbxenv.yaml` в корень репозитория `antigravity-sbx-patched`!**
+> Размещение `sbxenv.yaml` в корне репозитория засоряет рабочее дерево Git и привязывает состояние окружения SBX (`.sbx/`) к исходникам тулкита. Шаблоны предназначены для копирования в директории ваших целевых рабочих проектов.
+
+Шаблоны используют `agent: shell`, поскольку `antigravity` является модульным китом, а не зарегистрированным системным агентом SBX. При запуске через `sbx env run` открывается интерактивная оболочка, в которой доступен пропатченный бинарник `agy`.
+
 ```bash
-# Скопируйте шаблон в корень вашего проекта
+# 1. Скопируйте шаблон в корень вашего рабочего проекта
 cp templates/sbxenv-math.yaml /path/to/my-project/sbxenv.yaml
+cp templates/.env.example /path/to/my-project/.env
 cd /path/to/my-project
 
-# Запуск песочницы
+# 2. Настройте GEMINI_API_KEY в файле .env (если требуется)
+
+# 3. При необходимости скорректируйте пути к kits в sbxenv.yaml:
+#    kits:
+#      - path: /path/to/antigravity-sbx-patched/kits/math-labs
+
+# 4. Запуск песочницы
 sbx env run
 ```
 
 ### 2.2. Подключение Kits на лету
 
+При запуске базового кита агента можно на лету подключать mixin-киты с помощью флага `--kit`:
+
 ```bash
 # Подключение отдельного набора инструментов
-sbx run antigravity --kit ./kits/math-labs
+sbx run ./kits/antigravity --kit ./kits/math-labs
 
 # Подключение нескольких наборов одновременно
-sbx run antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
+sbx run ./kits/antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
 ```
 
 ---

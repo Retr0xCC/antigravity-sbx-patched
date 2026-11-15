@@ -35,6 +35,14 @@ fi
 echo "==> Validating built image..."
 "${DOCKER_CMD}" run --rm "${IMAGE_TAG}" agy --version
 
-echo "==> Success! Image ${IMAGE_TAG} is ready for use with sbx."
-echo "    Usage with sbx:"
-echo "      sbx run antigravity --template ${IMAGE_TAG}"
+echo "==> Packaging downstream Antigravity Sandbox Kit (OCI layout)..."
+python3 "${SCRIPT_DIR}/package_kit.py" \
+    --spec "${ROOT_DIR}/kits/antigravity/spec.yaml" \
+    --downstream-image "${IMAGE_TAG}" \
+    --output-dir "${ROOT_DIR}/dist/antigravity-kit"
+
+echo "==> Success! Image ${IMAGE_TAG} and kit artifact are ready."
+echo "    Usage with sbx (local kit):"
+echo "      sbx run ./kits/antigravity --template ${IMAGE_TAG}"
+echo "    Usage with sbx (published kit):"
+echo "      sbx create --name my-sandbox \"ghcr.io/retr0xcc/antigravity-kit:latest\" <workspace> [mounts...]"

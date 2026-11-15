@@ -1,10 +1,10 @@
 schemaVersion: "1"
 name: rpi-edge-workspace
-agent: antigravity
+agent: shell
 workspace: .
 
 sandboxOptions:
-  template: ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+  template: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
   memory: 8gb
   cpus: 4
 
@@ -13,3 +13,4 @@ kits:
 
 env:
   ANSIBLE_FORCE_COLOR: "1"
+  GEMINI_API_KEY: "${GEMINI_API_KEY:-}"

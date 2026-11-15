@@ -22,13 +22,39 @@
 
 ### 1.2. Quick Start
 
-Images are automatically published to **GitHub Packages (GHCR)**:
+Artifacts are automatically published to **GitHub Packages (GHCR)**:
 
-* `ghcr.io/Retr0xCC/antigravity-sbx-patched:latest`
+* **Container Image**: `ghcr.io/retr0xcc/antigravity-sbx-patched:latest`
+* **Sandbox Kit (OCI Artifact)**: `ghcr.io/retr0xcc/antigravity-kit:latest`
 
 #### Running in Docker Sandboxes (SBX)
+
+##### Option A. Via Published Kit (No Git clone needed)
+The downstream kit is published to GHCR and references the patched `antigravity-sbx-patched` container image.
+
+> **Important**: By default, Docker Sandboxes only permits installing kits from `docker.io/` and `dhi.io/`. To allow pulling kits from GHCR, run this once on your host:
+> ```bash
+> sbx settings set kit.allowedSources '["docker.io/","dhi.io/","ghcr.io/retr0xcc/"]'
+> ```
+
 ```bash
-sbx run antigravity --template ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
+# Create sandbox for project
+sbx create --name my-sandbox "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/my-project
+
+# Start and attach to the created sandbox
+sbx start -a my-sandbox
+
+# Or launch on the fly in the current directory:
+sbx run "ghcr.io/retr0xcc/antigravity-kit:latest"
+```
+
+##### Option B. Via Local Kit from Repository
+```bash
+# Launch using defaults declared in spec.yaml
+sbx run ./kits/antigravity
+
+# Or create with custom workspace
+sbx create --name my-sandbox "./kits/antigravity" /path/to/my-project
 ```
 
 #### Running in Standard Docker
@@ -36,7 +62,7 @@ sbx run antigravity --template ghcr.io/Retr0xCC/antigravity-sbx-patched:latest
 docker run -it --rm \
   -v "$(pwd):/home/agent/workspace" \
   -w /home/agent/workspace \
-  ghcr.io/Retr0xCC/antigravity-sbx-patched:latest bash
+  ghcr.io/retr0xcc/antigravity-sbx-patched:latest bash
 ```
 
 ---
@@ -57,42 +83,67 @@ docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 
 ---
 
-## PART 2. Templates and Kits (Optional)
+## PART 2. Templates
+
+Two launch options are available:
+
+1. **Kit** — Launch via `sbx run ./kits/antigravity` (or via published kit `ghcr.io/retr0xcc/antigravity-kit:latest`). Loads `kits/antigravity/spec.yaml`, providing:
+   * Outbound network allowlist (Google OAuth, Generative Language API, Antigravity endpoints, GitHub).
+   * Credentials injection (`GEMINI_API_KEY`) via secure proxyManaged with `x-goog-api-key` header injection.
+   * Startup hooks (automatically generates `settings.json` and configures MCP Gateway).
+   * Entrypoint: auto-launches `agy --dangerously-skip-permissions`.
+
+2. **Env** — Launch via `sbx env run` using `sbxenv.yaml`. Uses built-in `agent: shell` with the container image. Ideal for an interactive shell with manual session management.
 
 ```text
 antigravity-sbx-patched/
 ├── templates/                   # Declarative workspace templates (sbxenv)
-│   ├── sbxenv.yaml              # Universal starter template
+│   ├── sbxenv.yaml              # Base template (agent: shell)
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, linters
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
-│   └── .env.example             # Environment variable template
+│   └── .env.example             # Environment variables (GEMINI_API_KEY)
 └── kits/                        # Modular SBX Kits (spec.yaml)
-    ├── antigravity/             # Base Antigravity agent definition
-    ├── math-labs/               # Scientific computing mixin
-    ├── rpi-edge-node/           # Edge automation mixin
-    └── affine-mcp/              # AFFiNE MCP server mixin
+    ├── antigravity/             # Base Antigravity agent definition (kind: sandbox)
+    ├── math-labs/               # Scientific computing mixin (kind: mixin)
+    ├── rpi-edge-node/           # Edge automation mixin (kind: mixin)
+    └── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin)
 ```
 
 ### 2.1. Declarative Workspace Setup (`sbxenv.yaml`)
 
+> [!WARNING]
+> **Do not copy `sbxenv.yaml` into the root of `antigravity-sbx-patched`!**
+> Placing `sbxenv.yaml` in the repository root litters the Git working tree and binds the SBX local state cache (`.sbx/`) to the toolkit source directory. Templates are meant to be copied to your separate project folders.
+
+Templates declare `agent: shell` because `antigravity` is a modular kit rather than a built-in SBX system agent. Running `sbx env run` starts an interactive shell with the pre-installed and patched `agy` executable available.
+
 ```bash
-# Copy template to project root
+# 1. Copy the template to your target project root
 cp templates/sbxenv-math.yaml /path/to/my-project/sbxenv.yaml
+cp templates/.env.example /path/to/my-project/.env
 cd /path/to/my-project
 
-# Launch sandbox
+# 2. Configure GEMINI_API_KEY in .env if needed
+
+# 3. Adjust kit paths in sbxenv.yaml if needed:
+#    kits:
+#      - path: /path/to/antigravity-sbx-patched/kits/math-labs
+
+# 4. Launch sandbox
 sbx env run
 ```
 
-### 2.2. Attaching Modular Kits Dynamically
+### 2.2. Attaching Kits Dynamically
+
+When launching the base agent kit, you can dynamically stack mixin kits using `--kit`:
 
 ```bash
 # Attach specific toolchain
-sbx run antigravity --kit ./kits/math-labs
+sbx run ./kits/antigravity --kit ./kits/math-labs
 
 # Stack multiple kits
-sbx run antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
+sbx run ./kits/antigravity --kit ./kits/math-labs --kit ./kits/affine-mcp
 ```
 
 ---

@@ -14,5 +14,11 @@ Thumbs.db
 *.tmp
 *.log
 
+# SBX declarative environment & state
+sbxenv.yaml
+.sbx/
+.env
+dist/
+
 # Dev Container Antigravity Sandbox (Isolated)
 .devcontainer/

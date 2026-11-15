@@ -5,8 +5,7 @@ kind: mixin
 displayName: AFFiNE MCP Workspace
 description: Model Context Protocol (MCP) server for AFFiNE Cloud and Self-Hosted workspaces
 
-metadata:
-  version: "1.0.0"
+version: "1.0.0"
 
 requires:
   - deb/jq

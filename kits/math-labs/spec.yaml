@@ -5,8 +5,7 @@ kind: mixin
 displayName: Math Labs & Scientific Computing
 description: Python scientific stack with Jupyter, NumPy, SciPy, Matplotlib, SymPy, and Pandas
 
-metadata:
-  version: "1.0.0"
+version: "1.0.0"
 
 capabilities:
   - type: com.docker.sandbox/network-policy@1

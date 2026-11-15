@@ -42,7 +42,11 @@ jobs:
         id: meta
         run: |
           IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          echo "tags=${IMAGE_LOWER}:latest" >> $GITHUB_OUTPUT
+          TAGS="${IMAGE_LOWER}:latest"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAGS="${TAGS},${IMAGE_LOWER}:${{ github.ref_name }}"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -55,3 +59,37 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Package and publish Antigravity Sandbox Kit (Downstream OCI Artifact)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          KIT_TARGET="ghcr.io/${OWNER_LOWER}/antigravity-kit:latest"
+          DOWNSTREAM_IMG="ghcr.io/${OWNER_LOWER}/antigravity-sbx-patched:latest"
+          EXTRA_ARGS=""
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            EXTRA_ARGS="--additional-tags ${{ github.ref_name }}"
+            DOWNSTREAM_IMG="ghcr.io/${OWNER_LOWER}/antigravity-sbx-patched:${{ github.ref_name }}"
+          fi
+          python3 ./ci/package_kit.py \
+            --spec ./kits/antigravity/spec.yaml \
+            --downstream-image "${DOWNSTREAM_IMG}" \
+            --target "${KIT_TARGET}" \
+            --fallback-repo "ghcr.io/${OWNER_LOWER}/antigravity-sbx-patched:kit" \
+            --username "${{ github.actor }}" \
+            --token "${{ secrets.GITHUB_TOKEN }}" \
+            ${EXTRA_ARGS} \
+            --push
+
+      - name: Build and publish Mixin Kits
+        continue-on-error: true
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for kit in math-labs rpi-edge-node affine-mcp; do
+            echo "==> Building and publishing mixin kit ${kit}..."
+            docker buildx build "./kits/${kit}" \
+              -f "./kits/${kit}/spec.yaml" \
+              -t "ghcr.io/${OWNER_LOWER}/${kit}-kit:latest" \
+              --push || echo "Warning: Could not push ${kit}-kit directly (requires package write permissions)"
+          done
