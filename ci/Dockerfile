@@ -42,6 +42,7 @@ RUN set -eux; \
 
 # Enforce disabling automatic updates so Google background updater never overwrites the patch
 ENV AGY_CLI_DISABLE_AUTO_UPDATE=true
+ENV PATH="/home/agent/.local/bin:${PATH}"
 
 USER agent
 WORKDIR /home/agent/workspace

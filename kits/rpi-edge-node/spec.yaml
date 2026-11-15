@@ -13,7 +13,10 @@ capabilities:
       runtime:
         allow:
           - "galaxy.ansible.com"
+          - "galaxy-api.ansible.com"
+          - "*.cloudfront.net"
           - "github.com"
+          - "api.github.com"
           - "proxy.golang.org"
           - "pypi.org"
           - "files.pythonhosted.org"
@@ -23,11 +26,20 @@ capabilities:
       startup:
         - command: |
             set -e
+            export PATH="$HOME/.local/bin:$PATH"
+            if ! grep -qs 'export PATH="\$HOME/\.local/bin:\$PATH"' "$HOME/.bashrc" 2>/dev/null; then
+              echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+            fi
+            if [ -w "/etc/sandbox-persistent.sh" ] && ! grep -qs 'export PATH="\$HOME/\.local/bin:\$PATH"' /etc/sandbox-persistent.sh 2>/dev/null; then
+              echo 'export PATH="$HOME/.local/bin:$PATH"' >> /etc/sandbox-persistent.sh
+            fi
             if ! command -v ansible >/dev/null 2>&1; then
               uv tool install ansible-core
               uv tool install ansible-lint
               uv tool install yamllint
-              ansible-galaxy collection install community.general
+            fi
+            if command -v ansible-galaxy >/dev/null 2>&1; then
+              ansible-galaxy collection install community.general || true
             fi
           user: "1000"
           description: Provision Ansible and Edge automation toolchain
