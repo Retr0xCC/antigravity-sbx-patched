@@ -22,10 +22,9 @@
 
 ### 1.2. Quick Start
 
-Images are published to **GitHub Packages (GHCR)** and **Codeberg**:
+Images are automatically published to **GitHub Packages (GHCR)**:
 
 * `ghcr.io/Retr0xCC/antigravity-sbx-patched:latest`
-* `codeberg.org/retr0xcc/antigravity-sbx-patched:latest`
 
 #### Running in Docker Sandboxes (SBX)
 ```bash
@@ -54,7 +53,7 @@ Downstream build directly from `sbx/antigravity-image:latest` with strict patch 
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 ```
 
-* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) builds and automatically publishes the image to GHCR (and syncs to Codeberg Registry when `CODEBERG_TOKEN` secret is configured).
+* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) builds and publishes the image to GHCR.
 
 ---
 

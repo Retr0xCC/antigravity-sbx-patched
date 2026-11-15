@@ -22,10 +22,9 @@
 
 ### 1.2. Быстрый запуск
 
-Образ доступен в **GitHub Packages (GHCR)** и **Codeberg**:
+Образ автоматически публикуется в **GitHub Packages (GHCR)**:
 
 * `ghcr.io/Retr0xCC/antigravity-sbx-patched:latest`
-* `codeberg.org/retr0xcc/antigravity-sbx-patched:latest`
 
 #### В Docker Sandboxes (SBX)
 ```bash
@@ -54,7 +53,7 @@ docker run -it --rm \
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
 ```
 
-* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) собирает образ и автоматически публикует его в GHCR (а при настройке секрета `CODEBERG_TOKEN` — синхронно пушит и в реестр Codeberg).
+* **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) собирает образ и публикует его в GHCR.
 
 ---
 
