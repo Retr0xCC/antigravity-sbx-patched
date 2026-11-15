@@ -24,7 +24,9 @@
 
 Артефакты автоматически публикуются в **GitHub Packages (GHCR)**:
 
-* **Контейнерный образ**: `ghcr.io/retr0xcc/antigravity-sbx-patched:latest`
+* **Контейнерные образы**:
+  - `ghcr.io/retr0xcc/antigravity-sbx-patched:latest` — минимальный базовый образ (только agy + patch)
+  - `ghcr.io/retr0xcc/antigravity-sbx-patched:media` — специализированный образ для медиа-пайплайнов (`ffmpeg`, `mkvtoolnix`, `mediainfo`, `jq`)
 * **Sandbox Kit (OCI-артефакт)**: `ghcr.io/retr0xcc/antigravity-kit:latest`
 
 #### В Docker Sandboxes (SBX)
@@ -72,11 +74,12 @@ docker run -it --rm \
 Сборка происходит downstream из `sbx/antigravity-image:latest` со строгой проверкой статуса патча (сборка завершится с ошибкой, если патч не применился):
 
 ```bash
-# Через сборочный скрипт
+# Через сборочный скрипт (собирает базовый образ и media-версию)
 ./ci/build.sh
 
 # Или напрямую через docker build
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
+docker build -t antigravity-sbx-patched:media -f kits/media-operator/Dockerfile kits/media-operator
 ```
 
 * **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) собирает образ и публикует его в GHCR.

@@ -41,12 +41,14 @@ jobs:
       - name: Determine image tags
         id: meta
         run: |
-          IMAGE_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_LOWER="${{ env.REGISTRY }}/${REPO_LOWER}"
           TAGS="${IMAGE_LOWER}:latest"
           if [ "${{ github.ref_type }}" = "tag" ]; then
             TAGS="${TAGS},${IMAGE_LOWER}:${{ github.ref_name }}"
           fi
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "image_lower=${REPO_LOWER}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -57,6 +59,18 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ github.event.inputs.base_image || 'docker.io/sbx/antigravity-image:latest' }}
           tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and publish Media Operator Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./kits/media-operator
+          file: ./kits/media-operator/Dockerfile
+          push: true
+          build-args: |
+            BASE_IMAGE=ghcr.io/${{ steps.meta.outputs.image_lower }}:latest
+          tags: ghcr.io/${{ steps.meta.outputs.image_lower }}:media
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -33,7 +33,7 @@ cat <<EOF > ./out/host_profile.json
 EOF
 
 # Run sandbox planning
-sbx run --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+sbx run --template ghcr.io/retr0xcc/antigravity-sbx-patched:media \
         --kit ./kits/media-operator \
         -v "/mnt/storage/Downloads/Torrents/AnimeSeries:/media/input:ro" \
         -v "$(pwd)/out:/media/output:rw"

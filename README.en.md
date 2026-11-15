@@ -24,7 +24,9 @@
 
 Artifacts are automatically published to **GitHub Packages (GHCR)**:
 
-* **Container Image**: `ghcr.io/retr0xcc/antigravity-sbx-patched:latest`
+* **Container Images**:
+  - `ghcr.io/retr0xcc/antigravity-sbx-patched:latest` — minimal base image (agy + patch)
+  - `ghcr.io/retr0xcc/antigravity-sbx-patched:media` — specialized media pipeline image (`ffmpeg`, `mkvtoolnix`, `mediainfo`, `jq`)
 * **Sandbox Kit (OCI Artifact)**: `ghcr.io/retr0xcc/antigravity-kit:latest`
 
 #### Running in Docker Sandboxes (SBX)
@@ -72,11 +74,12 @@ docker run -it --rm \
 Downstream build directly from `sbx/antigravity-image:latest` with strict patch validation (build halts if the patch fails):
 
 ```bash
-# Via build helper
+# Via build helper (builds base image and media variant)
 ./ci/build.sh
 
 # Or direct docker build
 docker build -t antigravity-sbx-patched:latest -f ci/Dockerfile .
+docker build -t antigravity-sbx-patched:media -f kits/media-operator/Dockerfile kits/media-operator
 ```
 
 * **GitHub Actions**: [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml) builds and publishes the image to GHCR.

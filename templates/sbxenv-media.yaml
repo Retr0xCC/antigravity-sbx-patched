@@ -4,7 +4,7 @@ agent: shell
 workspace: .
 
 sandboxOptions:
-  template: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
+  template: ghcr.io/retr0xcc/antigravity-sbx-patched:media
   memory: 8gb
   cpus: 4
 
