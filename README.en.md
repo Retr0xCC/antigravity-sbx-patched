@@ -102,12 +102,14 @@ antigravity-sbx-patched/
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, linters
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
+│   ├── sbxenv-media.yaml        # Media pipeline, Jellyfin/Plex planner
 │   └── .env.example             # Environment variables (GEMINI_API_KEY)
 └── kits/                        # Modular SBX Kits (spec.yaml)
     ├── antigravity/             # Base Antigravity agent definition (kind: sandbox)
     ├── math-labs/               # Scientific computing mixin (kind: mixin)
     ├── rpi-edge-node/           # Edge automation mixin (kind: mixin)
-    └── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin)
+    ├── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin)
+    └── media-operator/          # Media pipeline & classifier mixin (kind: mixin)
 ```
 
 ### 2.1. Declarative Workspace Setup (`sbxenv.yaml`)

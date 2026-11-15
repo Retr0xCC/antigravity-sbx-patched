@@ -102,12 +102,14 @@ antigravity-sbx-patched/
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, линтеры
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
+│   ├── sbxenv-media.yaml        # Мультимедиа-библиотеки, Jellyfin/Plex планировщик
 │   └── .env.example             # Переменные окружения (GEMINI_API_KEY)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
     ├── antigravity/             # Базовый агент Antigravity (kind: sandbox)
     ├── math-labs/               # Научные вычисления (kind: mixin)
     ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin)
-    └── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin)
+    ├── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin)
+    └── media-operator/          # Медиа-пайплайн и классификатор (kind: mixin)
 ```
 
 ### 2.1. Использование шаблонов (`sbxenv.yaml`)

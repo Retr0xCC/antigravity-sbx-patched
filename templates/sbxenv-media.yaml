@@ -1,0 +1,16 @@
+schemaVersion: "1"
+name: media-operator-workspace
+agent: shell
+workspace: .
+
+sandboxOptions:
+  template: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
+  memory: 8gb
+  cpus: 4
+
+kits:
+  - ghcr.io/retr0xcc/media-operator-kit:latest
+
+env:
+  PYTHONUNBUFFERED: "1"
+  GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
