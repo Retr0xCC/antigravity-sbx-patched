@@ -2,8 +2,7 @@
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/*
-!.vscode/settings.json
+.vscode/
 *.swp
 *.swo
 
