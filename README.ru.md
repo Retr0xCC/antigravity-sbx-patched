@@ -91,7 +91,7 @@ docker build -t antigravity-sbx-patched:media -f kits/media-operator/Dockerfile 
 Предусмотрено два варианта запуска:
 
 1. **Kit** — запуск через `sbx run ./kits/antigravity` (или через опубликованный кит `ghcr.io/retr0xcc/antigravity-kit:latest`). Использует спецификацию `kits/antigravity/spec.yaml`, обеспечивая:
-   * Сетевой allowlist (доступ к сервисам Google, OAuth, Generative Language API, Antigravity, GitHub).
+   * Нативную сетевую изоляцию: полный доступ в публичный Интернет (`*`) для инструментов/зависимостей при строгой блокировке локальной сети (RFC 1918, `169.254.0.0/16`, `localhost`, `*.local`).
    * Проброс учетных данных (`GEMINI_API_KEY`) через защищенный proxyManaged с инъекцией заголовка `x-goog-api-key`.
    * Startup-хуки (автоконфигурация `settings.json` и регистрация MCP Gateway).
    * Точку входа: запуск `agy --dangerously-skip-permissions`.
@@ -160,7 +160,48 @@ sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/
 # Быстрый запуск агента shell с пропатченным шаблоном и mixin-китом:
 sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest
+
+# Запуск OpenCode с миксин-китом AFFiNE MCP (автоконфигурация ~/.config/opencode/opencode.json):
+sbx run opencode . --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
+
+# Запуск OpenCode с несколькими китами одновременно (Math Labs + AFFiNE MCP):
+sbx run opencode . \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 ```
+
+### 2.3. Сетевая политика: доступ в Интернет без локальной сети (Internet-Only Isolation)
+
+Одной из частых проблем изолированных AI-агентов является блокировка интернета: агент не может установить пакеты (`npm`, `pip`, `apt`, `cargo`), выполнить `curl`, обратиться к внешним API или склонировать репозиторий. При этом открывать полный доступ к локальной сети небезопасно, так как агент может просканировать внутреннюю сеть, обратиться к сервисам хоста (`localhost`) или прочитать метаданные облачного провайдера.
+
+В Docker Sandboxes реализована нативная модель сетевых политик с приоритетом запрета (**Deny-First Precedence**):
+1. **При запуске через Kit (`kits/antigravity/spec.yaml`)**:
+   Политика `com.docker.sandbox/network-policy@1` уже встроена в спецификацию:
+   * `runtime.allow: ["*"]` — разрешает исходящий трафик во весь публичный интернет.
+   * `runtime.deny` — блокирует доступ к локальному хосту, LAN и метаданным:
+     - `localhost`, `host.docker.internal`, `*.local`, `*.internal`, `*.lan`, `*.home.arpa`
+     - Приватные подсети IPv4 RFC 1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+     - Loopback и облачные метаданные (AWS/GCP/Azure): `127.0.0.0/8`, `169.254.0.0/16`
+     - Локальные адреса IPv6: `::1`, `fc00::/7`, `fe80::/10`
+
+2. **При запуске через `sbx env` или отдельную песочницу (Host-level)**:
+   Для настройки хостовой политики SBX воспользуйтесь скриптом инициализации [ci/init-network.sh](ci/init-network.sh):
+   ```bash
+   # Инициализация глобальной политики для всех песочниц на хосте:
+   ./ci/init-network.sh
+
+   # Или применение политики к конкретной песочнице:
+   ./ci/init-network.sh --sandbox my-sandbox
+
+   # Проверка активных правил:
+   ./ci/init-network.sh --status
+   ```
+
+   Либо напрямую через CLI `sbx`:
+   ```bash
+   sbx policy init allow-all
+   sbx policy deny network localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16
+   ```
 
 ---
 

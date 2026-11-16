@@ -300,7 +300,17 @@ def create_kit_v3_artifact(spec_path: str, downstream_image: str = None) -> tupl
         if isinstance(loaded, dict):
             descriptor_dict = loaded
     except Exception:
-        pass
+        try:
+            # Fallback to Node js-yaml if Python PyYAML is not installed
+            proc = subprocess.run(
+                ["node", "-e", "const yaml = require('js-yaml'); console.log(JSON.stringify(yaml.load(process.argv[1])));", spec_content],
+                capture_output=True, text=True, check=True
+            )
+            loaded = json.loads(proc.stdout)
+            if isinstance(loaded, dict):
+                descriptor_dict = loaded
+        except Exception:
+            pass
 
     compact_descriptor = json.dumps(descriptor_dict, separators=(",", ":"))
 

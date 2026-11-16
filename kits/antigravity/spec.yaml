@@ -29,6 +29,9 @@ capabilities:
     config:
       runtime:
         allow:
+          # Allow all outbound public Internet egress
+          - "*"
+          # Explicit Google, Antigravity, and GitHub endpoints for credential inject & auditability
           - accounts.google.com:443
           - oauth2.googleapis.com:443
           - www.googleapis.com:443
@@ -51,6 +54,25 @@ capabilities:
           - objects.githubusercontent.com:443
           - deb.debian.org:80
           - dhi.io:80
+        deny:
+          # Block local/internal hostnames and Docker microVM host gateway
+          - "localhost"
+          - "*.local"
+          - "*.internal"
+          - "*.lan"
+          - "*.home.arpa"
+          - "host.docker.internal"
+          # Block RFC 1918 IPv4 private subnets
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          # Block IPv4 loopback and cloud instance metadata service
+          - "127.0.0.0/8"
+          - "169.254.0.0/16"
+          # Block IPv6 loopback, ULA, and link-local unicast
+          - "::1"
+          - "fc00::/7"
+          - "fe80::/10"
 
   - type: com.docker.sandbox/credential@1
     optional: true
@@ -147,4 +169,4 @@ capabilities:
         nothing bound, that key is removed and `agy` falls back to its interactive
         Google sign-in.
 
-        Egress is governed by Docker Sandboxes network policy with balanced enforcement.
+        Egress is governed by Docker Sandboxes network policy: outbound Internet access is open while local networks, private RFC 1918 subnets, and host services are blocked.

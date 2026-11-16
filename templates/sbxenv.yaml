@@ -5,9 +5,11 @@
 #
 # NOTE: 'agent: shell' is used because Docker SBX requires a built-in
 # agent name. Inside the container, 'agy' is pre-installed and patched.
-# For full agent capabilities (Gemini proxy credentials, Google network
-# allowlist, and startup hooks), run the kit directly:
+# For full agent capabilities (Gemini proxy credentials, pre-baked Internet-only
+# network policy, and startup hooks), run the kit directly:
 #   sbx run ghcr.io/retr0xcc/antigravity-kit:latest
+# Or initialize host network policy with Internet-only access (LAN blocked):
+#   ./ci/init-network.sh
 # ========================================================
 schemaVersion: "1"
 name: workspace

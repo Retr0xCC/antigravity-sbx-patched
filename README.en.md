@@ -91,7 +91,7 @@ docker build -t antigravity-sbx-patched:media -f kits/media-operator/Dockerfile 
 Two launch options are available:
 
 1. **Kit** — Launch via `sbx run ./kits/antigravity` (or via published kit `ghcr.io/retr0xcc/antigravity-kit:latest`). Loads `kits/antigravity/spec.yaml`, providing:
-   * Outbound network allowlist (Google OAuth, Generative Language API, Antigravity endpoints, GitHub).
+   * Native network isolation: full public Internet egress (`*`) for developer tools/dependencies with strict blocking of local LAN (RFC 1918, `169.254.0.0/16`, `localhost`, `*.local`).
    * Credentials injection (`GEMINI_API_KEY`) via secure proxyManaged with `x-goog-api-key` header injection.
    * Startup hooks (automatically generates `settings.json` and configures MCP Gateway).
    * Entrypoint: auto-launches `agy --dangerously-skip-permissions`.
@@ -160,7 +160,48 @@ sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/
 # Launch shell agent with patched template and mixin kit:
 sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest
+
+# Launch OpenCode with AFFiNE MCP mixin (auto-configured in ~/.config/opencode/opencode.json):
+sbx run opencode . --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
+
+# Launch OpenCode with multiple mixin kits simultaneously (Math Labs + AFFiNE MCP):
+sbx run opencode . \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 ```
+
+### 2.3. Network Policy: Internet-Only Isolation (Local Network Blocked)
+
+A common obstacle when running isolated AI coding agents is network restrictions: agents cannot install packages (`npm`, `pip`, `apt`, `cargo`), execute `curl`, query documentation, or fetch remote git repositories. Conversely, granting unrestricted access to local networks introduces security hazards such as internal network port-scanning, probing host services (`localhost`), or reaching cloud provider instance metadata.
+
+Docker Sandboxes implements a native **Deny-First Precedence** network model:
+1. **When running as a Kit (`kits/antigravity/spec.yaml`)**:
+   Capability `com.docker.sandbox/network-policy@1` is built directly into the descriptor:
+   * `runtime.allow: ["*"]` — Grants egress to any public Internet destination.
+   * `runtime.deny` — Strictly denies local network, host ports, and metadata:
+     - `localhost`, `host.docker.internal`, `*.local`, `*.internal`, `*.lan`, `*.home.arpa`
+     - IPv4 private subnets (RFC 1918): `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+     - Loopback and cloud instance metadata (AWS/GCP/Azure): `127.0.0.0/8`, `169.254.0.0/16`
+     - IPv6 local unicast/loopback: `::1`, `fc00::/7`, `fe80::/10`
+
+2. **When running via `sbx env` or standalone sandboxes (Host-level)**:
+   Use the provided helper script [ci/init-network.sh](ci/init-network.sh) to initialize host-level policies:
+   ```bash
+   # Initialize global Internet-only policy for all local sandboxes:
+   ./ci/init-network.sh
+
+   # Or scope the policy to an individual sandbox:
+   ./ci/init-network.sh --sandbox my-sandbox
+
+   # Check active policy rules:
+   ./ci/init-network.sh --status
+   ```
+
+   Or execute native `sbx policy` CLI commands directly:
+   ```bash
+   sbx policy init allow-all
+   sbx policy deny network localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16
+   ```
 
 ---
 

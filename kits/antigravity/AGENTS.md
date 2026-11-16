@@ -11,4 +11,4 @@ proxy swaps for the real key at Google's endpoints, and a startup hook sets
 nothing bound, that key is removed and `agy` falls back to its interactive
 Google sign-in.
 
-Egress is governed by Docker Sandboxes network policy with balanced enforcement.
+Egress is governed by Docker Sandboxes network policy: outbound Internet access is open while local networks, private RFC 1918 subnets, and host services are blocked.
