@@ -1,0 +1,35 @@
+# ========================================================
+# Docker Sandbox Declarative Environment Specification for OpenCode
+# Run with: sbx env run
+# Plan with: sbx env plan
+#
+# Launches the official OpenCode agent with attached kits.
+# API keys can be configured via host secrets:
+#   sbx secret set anthropic
+#   sbx secret set openai
+#   sbx secret set google
+# Or mapped via environment variables in your .env file.
+# ========================================================
+schemaVersion: "1"
+name: opencode-workspace
+agent: opencode
+workspace: .
+
+sandboxOptions:
+  memory: 8gb
+  cpus: 4
+
+# Attached Mixin Kits (OCI images from GHCR or local paths)
+kits:
+  - ghcr.io/retr0xcc/affine-mcp-kit:latest
+  # - ghcr.io/retr0xcc/math-labs-kit:latest
+  # - ghcr.io/retr0xcc/rpi-edge-node-kit:latest
+  # - ghcr.io/retr0xcc/media-operator-kit:latest
+
+# Environment Variables & Provider Keys
+env:
+  PYTHONUNBUFFERED: "1"
+  OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+  ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+  GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+  OPENCODE_API_KEY: "${OPENCODE_API_KEY:-}"

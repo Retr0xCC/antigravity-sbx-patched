@@ -102,11 +102,12 @@ Two launch options are available:
 antigravity-sbx-patched/
 ├── templates/                   # Declarative workspace templates (sbxenv)
 │   ├── sbxenv.yaml              # Base template (agent: shell)
+│   ├── sbxenv-opencode.yaml     # OpenCode template (agent: opencode)
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, linters
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
 │   ├── sbxenv-media.yaml        # Media pipeline, Jellyfin/Plex planner
-│   └── .env.example             # Environment variables (GEMINI_API_KEY)
+│   └── .env.example             # Environment variables (GEMINI_API_KEY, OPENAI_API_KEY, etc.)
 └── kits/                        # Modular SBX Kits (spec.yaml)
     ├── antigravity/             # Base Antigravity agent definition (kind: workload, v3)
     ├── math-labs/               # Scientific computing mixin (kind: mixin, v3)

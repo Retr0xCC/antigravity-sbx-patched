@@ -102,11 +102,12 @@ docker build -t antigravity-sbx-patched:media -f kits/media-operator/Dockerfile 
 antigravity-sbx-patched/
 ├── templates/                   # Декларативные шаблоны окружений (sbxenv)
 │   ├── sbxenv.yaml              # Базовый шаблон (agent: shell)
+│   ├── sbxenv-opencode.yaml     # Шаблон для OpenCode (agent: opencode)
 │   ├── sbxenv-math.yaml         # Python, Jupyter, NumPy, SymPy, Pandas
 │   ├── sbxenv-edge.yaml         # Ansible, Go, линтеры
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
 │   ├── sbxenv-media.yaml        # Мультимедиа-библиотеки, Jellyfin/Plex планировщик
-│   └── .env.example             # Переменные окружения (GEMINI_API_KEY)
+│   └── .env.example             # Переменные окружения (GEMINI_API_KEY, OPENAI_API_KEY и др.)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
     ├── antigravity/             # Базовый агент Antigravity (kind: workload, v3)
     ├── math-labs/               # Научные вычисления (kind: mixin, v3)

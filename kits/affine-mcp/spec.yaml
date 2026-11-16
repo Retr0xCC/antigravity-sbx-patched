@@ -27,11 +27,13 @@ capabilities:
             if ! command -v affine-mcp >/dev/null 2>&1; then
               npm install -g --ignore-scripts affine-mcp-server
             fi
-            cfg="$HOME/.gemini/config/mcp_config.json"
-            mkdir -p "$(dirname "$cfg")"
-            [ -s "$cfg" ] || echo '{}' > "$cfg"
-            frag=/tmp/affine-mcp.json
-            cat > "$frag" <<EOF
+
+            # 1. Register for Google Antigravity
+            gemini_cfg="$HOME/.gemini/config/mcp_config.json"
+            mkdir -p "$(dirname "$gemini_cfg")"
+            [ -s "$gemini_cfg" ] || echo '{}' > "$gemini_cfg"
+            frag_gemini=/tmp/affine-gemini.json
+            cat > "$frag_gemini" <<EOF
             {
               "mcpServers": {
                 "affine": {
@@ -42,11 +44,50 @@ capabilities:
               }
             }
             EOF
-            jq -s '.[0] * .[1]' "$cfg" "$frag" > "$cfg.tmp"
-            mv "$cfg.tmp" "$cfg"
-            rm -f "$frag"
+            jq -s '.[0] * .[1]' "$gemini_cfg" "$frag_gemini" > "$gemini_cfg.tmp"
+            mv "$gemini_cfg.tmp" "$gemini_cfg"
+            rm -f "$frag_gemini"
+
+            # 2. Register for OpenCode
+            opencode_cfg="$HOME/.config/opencode/opencode.json"
+            mkdir -p "$(dirname "$opencode_cfg")"
+            [ -s "$opencode_cfg" ] || echo '{"$schema":"https://opencode.ai/config.json","mcp":{}}' > "$opencode_cfg"
+            frag_opencode=/tmp/affine-opencode.json
+            cat > "$frag_opencode" <<EOF
+            {
+              "mcp": {
+                "affine": {
+                  "type": "local",
+                  "command": ["affine-mcp"],
+                  "enabled": true
+                }
+              }
+            }
+            EOF
+            jq -s '.[0] * .[1]' "$opencode_cfg" "$frag_opencode" > "$opencode_cfg.tmp"
+            mv "$opencode_cfg.tmp" "$opencode_cfg"
+            rm -f "$frag_opencode"
+
+            # 3. Register for Claude Code
+            claude_cfg="$HOME/.claude.json"
+            mkdir -p "$(dirname "$claude_cfg")"
+            [ -s "$claude_cfg" ] || echo '{}' > "$claude_cfg"
+            frag_claude=/tmp/affine-claude.json
+            cat > "$frag_claude" <<EOF
+            {
+              "mcpServers": {
+                "affine": {
+                  "command": "affine-mcp",
+                  "args": []
+                }
+              }
+            }
+            EOF
+            jq -s '.[0] * .[1]' "$claude_cfg" "$frag_claude" > "$claude_cfg.tmp"
+            mv "$claude_cfg.tmp" "$claude_cfg"
+            rm -f "$frag_claude"
           user: "1000"
-          description: Register AFFiNE MCP Server in Antigravity configuration
+          description: Register AFFiNE MCP Server across Antigravity, OpenCode, and Claude configurations
 
   - type: com.docker.sandbox/agent-context@2
     config:
@@ -54,4 +95,4 @@ capabilities:
         This workspace is configured with the AFFiNE MCP Server.
         - Provides 112 MCP tools for managing docs, pages, databases, and CRDT blocks.
         - To authenticate or reconfigure AFFiNE credentials, run 'affine-mcp login'.
-        - MCP configuration is stored in ~/.gemini/config/mcp_config.json.
+        - MCP configuration is automatically registered across Antigravity, OpenCode, and Claude.

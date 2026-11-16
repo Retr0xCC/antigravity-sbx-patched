@@ -8,13 +8,17 @@
 ## English
 
 ### Overview
-This Kit enables **Model Context Protocol (MCP)** integration between **Antigravity** and **AFFiNE Cloud** (`https://app.affine.pro`) or Self-Hosted instances.
+This Kit enables **Model Context Protocol (MCP)** integration between coding agents (**Antigravity**, **OpenCode**, **Claude**) and **AFFiNE Cloud** (`https://app.affine.pro`) or Self-Hosted instances.
 
 ### Quick Start
 
-1. **Attach the Kit to an SBX sandbox:**
+1. **Attach the Kit to an SBX sandbox (Antigravity or OpenCode):**
    ```bash
+   # With Antigravity:
    sbx run ./kits/antigravity --kit ./kits/affine-mcp
+
+   # With OpenCode:
+   sbx run opencode --kit ./kits/affine-mcp
    ```
    *(Or add `./kits/affine-mcp` to the `kits` section in your `sbxenv.yaml`)*
 
@@ -37,13 +41,17 @@ This Kit enables **Model Context Protocol (MCP)** integration between **Antigrav
 ## Русский
 
 ### Обзор
-Кит для интеграции **Antigravity** с **AFFiNE Cloud** (`https://app.affine.pro`) или внешними Self-Hosted серверами через протокол **Model Context Protocol (MCP)**.
+Кит для интеграции агентов (**Antigravity**, **OpenCode**, **Claude**) с **AFFiNE Cloud** (`https://app.affine.pro`) или внешними Self-Hosted серверами через протокол **Model Context Protocol (MCP)**.
 
 ### Быстрый старт
 
-1. **Подключение кита в SBX:**
+1. **Подключение кита в SBX (с Antigravity или OpenCode):**
    ```bash
+   # С Antigravity:
    sbx run ./kits/antigravity --kit ./kits/affine-mcp
+
+   # С OpenCode:
+   sbx run opencode --kit ./kits/affine-mcp
    ```
    *(Или укажите `./kits/affine-mcp` в блоке `kits` вашего `sbxenv.yaml`)*
 
