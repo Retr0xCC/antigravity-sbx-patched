@@ -52,16 +52,23 @@ echo "==> Validating media tools in built media image..."
 "${DOCKER_CMD}" run --rm "${MEDIA_TAG}" mediainfo --version >/dev/null
 "${DOCKER_CMD}" run --rm "${MEDIA_TAG}" jq --version >/dev/null
 
+echo "==> Building and tagging downstream Antigravity Sandbox Kit (v3)..."
+"${DOCKER_CMD}" buildx build \
+    "${ROOT_DIR}/kits/antigravity" \
+    -f "${ROOT_DIR}/kits/antigravity/spec.yaml" \
+    --build-arg BASE_IMAGE="${IMAGE_TAG}" \
+    -t "ghcr.io/retr0xcc/antigravity-kit:latest"
+
 echo "==> Packaging downstream Antigravity Sandbox Kit (OCI layout)..."
 python3 "${SCRIPT_DIR}/package_kit.py" \
     --spec "${ROOT_DIR}/kits/antigravity/spec.yaml" \
     --downstream-image "${IMAGE_TAG}" \
     --output-dir "${ROOT_DIR}/dist/antigravity-kit"
 
-echo "==> Success! Images (${IMAGE_TAG}, ${MEDIA_TAG}) and kit artifact are ready."
-echo "    Usage with sbx (base):"
-echo "      sbx run ./kits/antigravity --template ${IMAGE_TAG}"
-echo "    Usage with sbx (media):"
-echo "      sbx run ./kits/media-operator --template ${MEDIA_TAG}"
+echo "==> Success! Images (${IMAGE_TAG}, ${MEDIA_TAG}) and kit artifacts are ready."
+echo "    Usage with sbx (local kit):"
+echo "      sbx run ./kits/antigravity"
+echo "    Usage with sbx and mixin (local):"
+echo "      sbx create --name my-sandbox ./kits/antigravity <workspace> --kit ./kits/affine-mcp"
 echo "    Usage with sbx (published kit):"
-echo "      sbx create --name my-sandbox \"ghcr.io/retr0xcc/antigravity-kit:latest\" <workspace> [mounts...]"
+echo "      sbx create --name my-sandbox \"ghcr.io/retr0xcc/antigravity-kit:latest\" <workspace> --kit ghcr.io/retr0xcc/affine-mcp-kit:latest"

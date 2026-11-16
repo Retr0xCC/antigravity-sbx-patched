@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """
-package_kit.py - Packages and publishes Antigravity SBX Kit as an OCI Artifact.
+package_kit.py - Packages and publishes Antigravity SBX Kit as an OCI Sandbox Kit v3.
 
-Creates an OCI artifact conforming to Docker Sandbox Kit v2:
-  artifactType: application/vnd.docker.sandbox.kit.v2
-  config.mediaType: application/vnd.docker.sandbox.kit.v2.spec+yaml
+Conforms to Docker Sandbox Kit Specification v3:
+  manifest.mediaType: application/vnd.oci.image.manifest.v1+json
+  annotations:
+    vnd.docker.sandbox.kit.schema-version: "3"
+    vnd.docker.sandbox.kit.descriptor: <compact JSON string of spec>
+    vnd.docker.sandbox.kit.capabilities: <comma-separated list of capabilities>
+    vnd.docker.sandbox.kit.built-by: {"name":"docker/sandbox-kit","version":"3.0.0"}
+  layers:
+    Staged kit sources at /usr/share/sandbox/kit/<kit>/kit.yaml
 
-Ensures downstream compliance:
-  - Verifies or injects downstream image reference (ghcr.io/retr0xcc/antigravity-sbx-patched)
-  - Packages spec.yaml and AGENTS.md
-  - Pushes directly to OCI registry (GHCR/Docker Hub) or exports OCI layout
+Delegates to `docker buildx` when available for full multi-platform / TCK conformance,
+with pure-Python fallback for standalone OCI registry distribution.
 """
 
 import argparse
 import base64
 import hashlib
+import io
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tarfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,7 +39,7 @@ def compute_digest_and_size(data: bytes) -> tuple[str, int]:
 
 
 def parse_simple_yaml_fields(content: str) -> dict[str, str]:
-    """Extracts top-level metadata fields from spec.yaml without requiring PyYAML."""
+    """Extracts top-level metadata fields from spec.yaml."""
     fields = {}
     for line in content.splitlines():
         if line.startswith("#"):
@@ -42,6 +50,42 @@ def parse_simple_yaml_fields(content: str) -> dict[str, str]:
             if key not in fields:
                 fields[key] = val
     return fields
+
+
+def extract_capabilities(content: str) -> list[str]:
+    """Extracts unique, sorted capability types declared in spec."""
+    types = re.findall(r"type:\s*['\"]?([a-z0-9.-]+/[a-z0-9.-]+@[0-9]+)['\"]?", content)
+    return sorted(list(set(types)))
+
+
+def build_staged_sources_layer(kit_name: str, spec_content: str, dockerfile_content: str = None) -> tuple[bytes, str, int]:
+    """Builds a tar.gz filesystem layer staging sources under /usr/share/sandbox/kit/<kit_name>/."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        # kit.yaml
+        spec_bytes = spec_content.encode("utf-8")
+        ti_spec = tarfile.TarInfo(name=f"usr/share/sandbox/kit/{kit_name}/kit.yaml")
+        ti_spec.size = len(spec_bytes)
+        ti_spec.mtime = 0
+        ti_spec.mode = 0o644
+        ti_spec.uid = 0
+        ti_spec.gid = 0
+        tar.addfile(ti_spec, io.BytesIO(spec_bytes))
+
+        # kit.dockerfile if present
+        if dockerfile_content:
+            df_bytes = dockerfile_content.encode("utf-8")
+            ti_df = tarfile.TarInfo(name=f"usr/share/sandbox/kit/{kit_name}/kit.dockerfile")
+            ti_df.size = len(df_bytes)
+            ti_df.mtime = 0
+            ti_df.mode = 0o644
+            ti_df.uid = 0
+            ti_df.gid = 0
+            tar.addfile(ti_df, io.BytesIO(df_bytes))
+
+    layer_bytes = buf.getvalue()
+    layer_digest, layer_size = compute_digest_and_size(layer_bytes)
+    return layer_bytes, layer_digest, layer_size
 
 
 class OciRegistryClient:
@@ -56,17 +100,14 @@ class OciRegistryClient:
         self._init_auth()
 
     def _init_auth(self):
-        # Prepare Basic Auth header for token exchange
         if self.username and self.password:
             creds = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
             self._basic_auth = f"Basic {creds}"
         elif self.password:
-            # If only token is provided, use username or 'token'
             u = self.username or "token"
             creds = base64.b64encode(f"{u}:{self.password}".encode()).decode()
             self._basic_auth = f"Basic {creds}"
         else:
-            # Try reading docker config
             cfg_path = os.path.expanduser("~/.docker/config.json")
             if os.path.exists(cfg_path):
                 try:
@@ -81,12 +122,10 @@ class OciRegistryClient:
                     pass
 
     def _ensure_bearer_token(self, scope: str = None):
-        """Acquires a valid JWT Bearer token from the registry auth service."""
         if self._bearer_token:
             return
 
         scope = scope or f"repository:{self.repo}:pull,push"
-        # 1. Probe the registry endpoint to discover realm and service
         probe_url = f"https://{self.registry}/v2/"
         realm = f"https://{self.registry}/token"
         service = self.registry
@@ -103,7 +142,6 @@ class OciRegistryClient:
             if m_service:
                 service = m_service.group(1)
 
-        # 2. Query token realm with Basic auth credentials
         params = {"service": service, "scope": scope}
         token_url = f"{realm}?{urllib.parse.urlencode(params)}"
         req = urllib.request.Request(token_url)
@@ -129,7 +167,6 @@ class OciRegistryClient:
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
             if e.code == 401 and "Www-Authenticate" in e.headers:
-                # Refresh token and retry once
                 self._bearer_token = None
                 self._ensure_bearer_token()
                 if self._bearer_token:
@@ -161,7 +198,6 @@ class OciRegistryClient:
             if not location:
                 raise RuntimeError("Registry did not return Location header for blob upload")
 
-            # Upload URL can be relative or absolute
             if not location.startswith("http"):
                 location = urllib.parse.urljoin(f"https://{self.registry}", location)
 
@@ -170,7 +206,6 @@ class OciRegistryClient:
             headers = {"Content-Type": "application/octet-stream", "Content-Length": str(len(data))}
             self._request("PUT", put_url, data=data, headers=headers)
         except urllib.error.HTTPError as e:
-            # Monolithic fallback
             try:
                 put_url = f"{self.base_url}/blobs/uploads/?digest={digest}"
                 headers = {"Content-Type": "application/octet-stream", "Content-Length": str(len(data))}
@@ -191,76 +226,130 @@ class OciRegistryClient:
         print(f"==> Successfully published kit artifact to https://{self.registry}/{self.repo}:{tag}")
 
 
-def create_kit_artifact(spec_path: str, downstream_image: str = None) -> tuple[dict, bytes, bytes]:
-    """Prepares the OCI Sandbox Kit v2 manifest and blob payloads."""
+def create_kit_v3_artifact(spec_path: str, downstream_image: str = None) -> tuple[dict, bytes, bytes, bytes, bytes]:
+    """
+    Creates a Docker Sandbox Kit v3 conforming OCI image manifest and blobs.
+    Returns: (manifest_dict, manifest_bytes, config_bytes, layer_bytes, spec_bytes)
+    """
     with open(spec_path, "r", encoding="utf-8") as f:
         spec_content = f.read()
 
-    # Downstream verification / injection:
-    # Ensure downstream image is used in sandbox.image
+    kit_dir = os.path.dirname(os.path.abspath(spec_path))
+    kit_stem = os.path.basename(kit_dir)
+
+    dockerfile_content = None
+    df_path = os.path.join(kit_dir, "Dockerfile")
+    if os.path.isfile(df_path):
+        with open(df_path, "r", encoding="utf-8") as f:
+            dockerfile_content = f.read()
+
     if downstream_image:
         spec_content = re.sub(
-            r"(sandbox:\s*\n\s*image:\s*)[^\n]+",
-            rf"\g<1>{downstream_image}",
+            r'(default:\s*["\'])([^"\']+)(["\'])',
+            lambda m: f"{m.group(1)}{downstream_image}{m.group(3)}" if "antigravity-sbx-patched" in m.group(2) else m.group(0),
             spec_content
         )
-    elif "ghcr.io/retr0xcc/antigravity-sbx-patched" not in spec_content and "antigravity-sbx-patched" not in spec_content:
-        sys.stderr.write("WARNING: spec.yaml does not appear to point to the downstream patched image!\n")
 
     spec_bytes = spec_content.encode("utf-8")
-    spec_digest, spec_size = compute_digest_and_size(spec_bytes)
-
-    # Empty layer required by OCI Image Spec
-    empty_layer_bytes = b"{}"
-    empty_digest, empty_size = compute_digest_and_size(empty_layer_bytes)
-
     meta = parse_simple_yaml_fields(spec_content)
+    capabilities = extract_capabilities(spec_content)
+    capabilities_str = ",".join(capabilities)
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Staged sources layer
+    layer_bytes, layer_digest, layer_size = build_staged_sources_layer(kit_stem, spec_content, dockerfile_content)
+
+    # Image config blob
+    config_dict = {
+        "architecture": "amd64",
+        "os": "linux",
+        "created": now_utc,
+        "config": {
+            "User": "agent",
+            "Entrypoint": ["agy"],
+            "Cmd": ["--dangerously-skip-permissions"],
+            "WorkingDir": "/home/agent/workspace",
+            "Env": [
+                "PATH=/home/agent/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "BROWSER=xdg-open",
+                "AGY_CLI_DISABLE_AUTO_UPDATE=true"
+            ]
+        },
+        "rootfs": {
+            "type": "layers",
+            "diff_ids": [f"sha256:{hashlib.sha256(layer_bytes).hexdigest()}"]
+        }
+    }
+    config_bytes = json.dumps(config_dict, indent=2).encode("utf-8")
+    config_digest, config_size = compute_digest_and_size(config_bytes)
+
+    # v3 published descriptor is compact JSON
+    # If pyyaml is available, convert faithfully; otherwise store clean descriptor object
+    descriptor_dict = {
+        "schemaVersion": "3",
+        "displayName": meta.get("displayName", "Google Antigravity (Patched)"),
+        "description": meta.get("description", "Google agent platform"),
+        "version": meta.get("version", "1.0.0"),
+        "kind": meta.get("kind", "workload"),
+        "provides": [f"{kit_stem}@{meta.get('version', '1.0.0')}"],
+        "capabilities": [{"type": cap} for cap in capabilities]
+    }
+    try:
+        import yaml
+        loaded = yaml.safe_load(spec_content)
+        if isinstance(loaded, dict):
+            descriptor_dict = loaded
+    except Exception:
+        pass
+
+    compact_descriptor = json.dumps(descriptor_dict, separators=(",", ":"))
 
     manifest = {
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
-        "artifactType": "application/vnd.docker.sandbox.kit.v2",
         "config": {
-            "mediaType": "application/vnd.docker.sandbox.kit.v2.spec+yaml",
-            "digest": spec_digest,
-            "size": spec_size
+            "mediaType": "application/vnd.oci.image.config.v1+json",
+            "digest": config_digest,
+            "size": config_size
         },
         "layers": [
             {
-                "mediaType": "application/vnd.oci.empty.v1+json",
-                "digest": empty_digest,
-                "size": empty_size,
-                "data": "e30="
+                "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+                "digest": layer_digest,
+                "size": layer_size
             }
         ],
         "annotations": {
+            "vnd.docker.sandbox.kit.schema-version": "3",
+            "vnd.docker.sandbox.kit.descriptor": compact_descriptor,
+            "vnd.docker.sandbox.kit.capabilities": capabilities_str,
+            "vnd.docker.sandbox.kit.built-by": json.dumps({"name": "docker/sandbox-kit", "version": "3.0.0"}),
             "org.opencontainers.image.created": now_utc,
             "org.opencontainers.image.title": meta.get("displayName", "Google Antigravity (Patched)"),
-            "org.opencontainers.image.description": meta.get("description", "Google's agent-first development platform, available as the agy terminal coding agent with QNIX eligibility patch pre-baked."),
-            "vnd.docker.sandbox.kit.kind": meta.get("kind", "sandbox"),
-            "vnd.docker.sandbox.kit.name": meta.get("name", "antigravity"),
-            "vnd.docker.sandbox.kit.version": meta.get("version", "1.0.0")
+            "org.opencontainers.image.description": meta.get("description", "Google agent platform"),
+            "org.opencontainers.image.authors": meta.get("author", "Retr0xCC <retr0xcc@proton.me>"),
+            "org.opencontainers.image.version": meta.get("version", "1.0.0")
         }
     }
+    if "sourceUrl" in meta:
+        manifest["annotations"]["org.opencontainers.image.source"] = meta["sourceUrl"]
 
     manifest_bytes = json.dumps(manifest, indent=2).encode("utf-8")
-    return manifest, spec_bytes, manifest_bytes
+    return manifest, manifest_bytes, config_bytes, layer_bytes, spec_bytes
 
 
-def export_oci_layout(out_dir: str, manifest: dict, spec_bytes: bytes, manifest_bytes: bytes, tag: str = "latest"):
+def export_oci_layout(out_dir: str, manifest_bytes: bytes, config_bytes: bytes, layer_bytes: bytes, tag: str = "latest"):
     os.makedirs(f"{out_dir}/blobs/sha256", exist_ok=True)
     with open(f"{out_dir}/oci-layout", "w") as f:
         json.dump({"imageLayoutVersion": "1.0.0"}, f)
 
-    spec_digest = hashlib.sha256(spec_bytes).hexdigest()
-    with open(f"{out_dir}/blobs/sha256/{spec_digest}", "wb") as f:
-        f.write(spec_bytes)
+    config_digest = hashlib.sha256(config_bytes).hexdigest()
+    with open(f"{out_dir}/blobs/sha256/{config_digest}", "wb") as f:
+        f.write(config_bytes)
 
-    empty_bytes = b"{}"
-    empty_digest = hashlib.sha256(empty_bytes).hexdigest()
-    with open(f"{out_dir}/blobs/sha256/{empty_digest}", "wb") as f:
-        f.write(empty_bytes)
+    layer_digest = hashlib.sha256(layer_bytes).hexdigest()
+    with open(f"{out_dir}/blobs/sha256/{layer_digest}", "wb") as f:
+        f.write(layer_bytes)
 
     manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
     with open(f"{out_dir}/blobs/sha256/{manifest_digest}", "wb") as f:
@@ -282,11 +371,38 @@ def export_oci_layout(out_dir: str, manifest: dict, spec_bytes: bytes, manifest_
     with open(f"{out_dir}/index.json", "w") as f:
         json.dump(index, f, indent=2)
 
-    print(f"==> Exported OCI layout to {out_dir} with tag '{tag}'")
+    print(f"==> Exported OCI Sandbox Kit v3 layout to {out_dir} with tag '{tag}'")
+
+
+def try_docker_buildx(spec_path: str, target: str, downstream_image: str = None, push: bool = False, output_dir: str = None) -> bool:
+    """Attempts to build and export/push kit using native docker buildx sandbox-kit:3 frontend."""
+    if not shutil.which("docker"):
+        return False
+
+    kit_dir = os.path.dirname(os.path.abspath(spec_path))
+    cmd = ["docker", "buildx", "build", kit_dir, "-f", spec_path]
+
+    if downstream_image:
+        cmd.extend(["--build-arg", f"BASE_IMAGE={downstream_image}"])
+
+    if target:
+        cmd.extend(["-t", target])
+
+    if push:
+        cmd.append("--push")
+    elif output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        # Export as OCI layout archive or directory
+        tar_dest = os.path.join(output_dir, "kit-layout.tar")
+        cmd.extend(["--output", f"type=oci,dest={tar_dest}"])
+
+    print(f"==> Executing: {' '.join(cmd)}")
+    ret = subprocess.run(cmd)
+    return ret.returncode == 0
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Package and publish Antigravity SBX Kit as an OCI artifact")
+    parser = argparse.ArgumentParser(description="Package and publish Antigravity SBX Kit as an OCI Sandbox Kit v3")
     parser.add_argument("--spec", default="kits/antigravity/spec.yaml", help="Path to spec.yaml")
     parser.add_argument("--downstream-image", default="ghcr.io/retr0xcc/antigravity-sbx-patched:latest",
                         help="Downstream container image reference to enforce")
@@ -295,9 +411,10 @@ def main():
     parser.add_argument("--additional-tags", nargs="*", default=[],
                         help="Additional tags to publish (e.g. v1.0.0)")
     parser.add_argument("--fallback-repo",
-                        help="Fallback repository target if separate package creation is denied (e.g. ghcr.io/owner/repo:kit)")
+                        help="Fallback repository target if separate package creation is denied")
     parser.add_argument("--output-dir", help="Export to local OCI Image Layout directory")
     parser.add_argument("--push", action="store_true", help="Push to OCI registry")
+    parser.add_argument("--standalone", action="store_true", help="Force standalone Python OCI client (skip buildx)")
     parser.add_argument("--username", default=os.environ.get("GITHUB_ACTOR"),
                         help="Registry username (defaults to GITHUB_ACTOR)")
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN") or os.environ.get("REGISTRY_TOKEN"),
@@ -305,11 +422,21 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"==> Packaging Antigravity Sandbox Kit from {args.spec}...")
+    print(f"==> Packaging Docker Sandbox Kit v3 from {args.spec}...")
     print(f"    Downstream base image: {args.downstream_image}")
-    manifest, spec_bytes, manifest_bytes = create_kit_artifact(args.spec, args.downstream_image)
 
-    # Parse target
+    # If buildx is available and not in standalone mode, try buildx first
+    if not args.standalone and shutil.which("docker"):
+        # If pushing or exporting layout, test buildx
+        if args.push or args.output_dir:
+            success = try_docker_buildx(args.spec, args.target, args.downstream_image, push=args.push, output_dir=args.output_dir)
+            if success:
+                print(f"==> Successfully completed Kit v3 packaging via docker buildx.")
+                return
+            print("[Warning] docker buildx execution did not succeed; falling back to direct OCI client...")
+
+    manifest, manifest_bytes, config_bytes, layer_bytes, spec_bytes = create_kit_v3_artifact(args.spec, args.downstream_image)
+
     target_match = re.match(r"^([^/]+)/(.+?)(?::([^:]+))?$", args.target)
     if not target_match:
         sys.stderr.write(f"Error: Invalid target reference '{args.target}'\n")
@@ -320,45 +447,40 @@ def main():
     tag = (target_match.group(3) or "latest").lower()
 
     if args.output_dir:
-        export_oci_layout(args.output_dir, manifest, spec_bytes, manifest_bytes, tag)
+        export_oci_layout(args.output_dir, manifest_bytes, config_bytes, layer_bytes, tag)
 
     if args.push:
-        print(f"==> Publishing kit artifact to {registry}/{repo}:{tag}...")
+        print(f"==> Publishing kit v3 artifact to {registry}/{repo}:{tag}...")
         client = OciRegistryClient(registry, repo, username=args.username, token=args.token)
 
-        # 1. Upload blobs
-        empty_bytes = b"{}"
-        empty_digest = f"sha256:{hashlib.sha256(empty_bytes).hexdigest()}"
-        spec_digest = f"sha256:{hashlib.sha256(spec_bytes).hexdigest()}"
+        config_digest = f"sha256:{hashlib.sha256(config_bytes).hexdigest()}"
+        layer_digest = f"sha256:{hashlib.sha256(layer_bytes).hexdigest()}"
 
         try:
-            client.upload_blob(empty_bytes, empty_digest)
-            client.upload_blob(spec_bytes, spec_digest)
-
-            # 2. Upload manifest for primary tag
+            client.upload_blob(config_bytes, config_digest)
+            client.upload_blob(layer_bytes, layer_digest)
             client.put_manifest(tag, manifest_bytes, "application/vnd.oci.image.manifest.v1+json")
 
-            # 3. Upload for additional tags if requested
             for add_tag in args.additional_tags:
                 client.put_manifest(add_tag.lower(), manifest_bytes, "application/vnd.oci.image.manifest.v1+json")
         except Exception as e:
             if args.fallback_repo:
                 sys.stderr.write(f"\n[Warning] Publishing to {registry}/{repo} failed: {e}\n")
-                sys.stderr.write(f"==> Retrying with repository-scoped fallback target: {args.fallback_repo}...\n")
+                sys.stderr.write(f"==> Retrying with fallback target: {args.fallback_repo}...\n")
                 fb_match = re.match(r"^([^/]+)/(.+?)(?::([^:]+))?$", args.fallback_repo)
                 if fb_match:
                     f_reg = fb_match.group(1).lower()
                     f_repo = fb_match.group(2).lower()
                     f_tag = (fb_match.group(3) or "kit").lower()
                     fb_client = OciRegistryClient(f_reg, f_repo, username=args.username, token=args.token)
-                    fb_client.upload_blob(empty_bytes, empty_digest)
-                    fb_client.upload_blob(spec_bytes, spec_digest)
+                    fb_client.upload_blob(config_bytes, config_digest)
+                    fb_client.upload_blob(layer_bytes, layer_digest)
                     fb_client.put_manifest(f_tag, manifest_bytes, "application/vnd.oci.image.manifest.v1+json")
                     return
             raise
 
     if not args.output_dir and not args.push:
-        print("==> Dry run: Generated manifest:")
+        print("==> Dry run: Generated Sandbox Kit v3 Manifest:")
         print(json.dumps(manifest, indent=2))
         print("\nPass --push to publish to registry or --output-dir <path> to export local OCI layout.")
 

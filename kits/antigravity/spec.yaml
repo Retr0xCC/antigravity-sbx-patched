@@ -1,104 +1,150 @@
-# syntax=docker/sandbox-kit:2
-schemaVersion: "2"
-kind: sandbox
-name: antigravity
-version: "1.0.0"
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
 displayName: Google Antigravity (Patched)
+author: "Retr0xCC <retr0xcc@proton.me>"
 description: Google's agent-first development platform, available as the agy terminal coding agent with QNIX eligibility patch pre-baked.
+sourceUrl: https://github.com/retr0xcc/antigravity-sbx-patched
+version: "1.0.0"
+licenses:
+  - LicenseRef-Proprietary
 
-sandbox:
-  image: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
-  entrypoint:
-    - agy
-  command:
-    default:
-      - --dangerously-skip-permissions
+kind: workload
 
-agentInstructions:
-  filename: AGENTS.md
+provides:
+  - "antigravity@1.0.0"
 
-credentials:
-  - service: google
+dockerfile: ./Dockerfile
+
+args:
+  baseImage:
+    default: "ghcr.io/retr0xcc/antigravity-sbx-patched:latest"
+    description: "Downstream patched Antigravity image reference"
+    buildArg: BASE_IMAGE
+
+capabilities:
+  - type: com.docker.sandbox/sbx@1
+
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - accounts.google.com:443
+          - oauth2.googleapis.com:443
+          - www.googleapis.com:443
+          - lh3.googleusercontent.com:443
+          - aicode.googleapis.com:443
+          - cloudcode-pa.googleapis.com:443
+          - daily-cloudcode-pa.googleapis.com:443
+          - generativelanguage.googleapis.com:443
+          - antigravity.google:443
+          - antigravity.google.com:443
+          - antigravity-unleash.goog:443
+          - play.googleapis.com:443
+          - safebrowsing.googleapis.com:443
+          - www.gstatic.com:443
+          - antigravity-cli-auto-updater-974169037036.us-central1.run.app:443
+          - storage.googleapis.com:443
+          - raw.githubusercontent.com:443
+          - github.com:443
+          - api.github.com:443
+          - objects.githubusercontent.com:443
+          - deb.debian.org:80
+          - dhi.io:80
+
+  - type: com.docker.sandbox/credential@1
+    optional: true
     description: Gemini API key for Antigravity's headless API-key mode
-    apiKey:
-      name: GEMINI_API_KEY
-      proxyManaged: true
-      inject:
-        - domain: generativelanguage.googleapis.com
-          header: x-goog-api-key
-          format: "%s"
+    config:
+      service: google
+      phase: runtime
+      apiKey:
+        name: GEMINI_API_KEY
+        proxyManaged: true
+        inject:
+          - domain: generativelanguage.googleapis.com
+            header: x-goog-api-key
+            format: "%s"
 
-permissions:
-  network:
-    allow:
-      - accounts.google.com
-      - oauth2.googleapis.com
-      - www.googleapis.com
-      - lh3.googleusercontent.com
-      - aicode.googleapis.com
-      - cloudcode-pa.googleapis.com
-      - daily-cloudcode-pa.googleapis.com
-      - generativelanguage.googleapis.com
-      - antigravity.google
-      - antigravity.google.com
-      - antigravity-unleash.goog
-      - play.googleapis.com
-      - safebrowsing.googleapis.com
-      - www.gstatic.com
-      - antigravity-cli-auto-updater-974169037036.us-central1.run.app
-      - storage.googleapis.com
-      - raw.githubusercontent.com
-      - github.com
-      - api.github.com
-      - objects.githubusercontent.com
-
-environment:
-  variables:
-    BROWSER: xdg-open
-    AGY_CLI_DISABLE_AUTO_UPDATE: "true"
-
-setup:
-  startup:
-    - command:
-        - sh
-        - -c
-        - |
-          set -e
-          cfg="$HOME/.gemini/antigravity-cli/settings.json"
-          mkdir -p "$(dirname "$cfg")"
-          [ -s "$cfg" ] || echo '{}' > "$cfg"
-          if [ "${SBX_CRED_GOOGLE_MODE:-none}" = apikey ]; then
-            jq '.modelProvider = "gemini"' "$cfg" > "$cfg.tmp"
-          else
-            jq 'del(.modelProvider)' "$cfg" > "$cfg.tmp"
-          fi
-          mv "$cfg.tmp" "$cfg"
-      user: "1000"
-      description: Select Gemini API-key mode only when a Google credential is available
-    - command:
-        - sh
-        - -c
-        - |
-          set -e
-          [ -n "$MCP_GATEWAY_URL" ] || exit 0
-          cfg="$HOME/.gemini/config/mcp_config.json"
-          mkdir -p "$(dirname "$cfg")"
-          [ -s "$cfg" ] || echo '{}' > "$cfg"
-          frag=/tmp/antigravity-mcp-gateway.json
-          cat > "$frag" <<EOF
-          {
-            "mcpServers": {
-              "mcp-gateway": {
-                "serverUrl": "$MCP_GATEWAY_URL",
-                "headers": {
-                  "Authorization": "Bearer $MCP_SENTINEL_TOKEN_NAME"
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command: |
+            set -e
+            cfg="$HOME/.gemini/antigravity-cli/settings.json"
+            mkdir -p "$(dirname "$cfg")"
+            [ -s "$cfg" ] || echo '{}' > "$cfg"
+            if [ "${SBX_CRED_GOOGLE_MODE:-none}" = apikey ]; then
+              jq '.modelProvider = "gemini"' "$cfg" > "$cfg.tmp"
+            else
+              jq 'del(.modelProvider)' "$cfg" > "$cfg.tmp"
+            fi
+            mv "$cfg.tmp" "$cfg"
+          user: "1000"
+          env: [SBX_CRED_GOOGLE_MODE]
+          description: Select Gemini API-key mode only when a Google credential is available
+        - command: |
+            set -e
+            [ -n "$MCP_GATEWAY_URL" ] || exit 0
+            cfg="$HOME/.gemini/config/mcp_config.json"
+            mkdir -p "$(dirname "$cfg")"
+            [ -s "$cfg" ] || echo '{}' > "$cfg"
+            frag=/tmp/antigravity-mcp-gateway.json
+            cat > "$frag" <<EOF
+            {
+              "mcpServers": {
+                "mcp-gateway": {
+                  "serverUrl": "$MCP_GATEWAY_URL",
+                  "headers": {
+                    "Authorization": "Bearer $MCP_SENTINEL_TOKEN_NAME"
+                  }
                 }
               }
             }
-          }
-          EOF
-          jq -s '.[0] * .[1]' "$cfg" "$frag" > "$cfg.tmp"
-          mv "$cfg.tmp" "$cfg"
-          rm -f "$frag"
-      user: "1000"
-      description: Register the sandbox MCP gateway in Antigravity's user configuration
+            EOF
+            jq -s '.[0] * .[1]' "$cfg" "$frag" > "$cfg.tmp"
+            mv "$cfg.tmp" "$cfg"
+            rm -f "$frag"
+          user: "1000"
+          env: [MCP_GATEWAY_URL, MCP_SENTINEL_TOKEN_NAME]
+          description: Register the sandbox MCP gateway in Antigravity's user configuration
+
+  - type: com.docker.sandbox/agent-sessions@1
+    config:
+      prompt: ["-p", "{{.Prompt}}"]
+      continue: ["--continue"]
+      resume: ["--conversation", "{{.SessionID}}"]
+
+  - type: com.docker.sandbox/agent-interactive-sessions@1
+    optional: true
+    config:
+      prompt: ["-i", "{{.Prompt}}"]
+      continue: ["--continue"]
+      resume: ["--conversation", "{{.SessionID}}"]
+
+  - type: com.docker.sandbox/acp@1
+    optional: true
+    description: Drive Antigravity sessions over the Agent Client Protocol
+    config:
+      agent: antigravity
+      command: [agy, acp, --dangerously-skip-permissions]
+
+  - type: com.docker.sandbox/agent-context@2
+    config:
+      filename: AGENTS.md
+      directory: /home/agent
+      content: |
+        # Google Antigravity (Patched)
+
+        Google's Antigravity agent is available in this sandbox as `agy` with the QNIX
+        eligibility patch pre-baked. Run it from the shell or use it directly as your
+        primary coding agent.
+
+        Authentication has two modes and the sandbox picks between them for you: with
+        a Google credential bound, `GEMINI_API_KEY` carries a sentinel the egress
+        proxy swaps for the real key at Google's endpoints, and a startup hook sets
+        `modelProvider: gemini` in `~/.gemini/antigravity-cli/settings.json`. With
+        nothing bound, that key is removed and `agy` falls back to its interactive
+        Google sign-in.
+
+        Egress is governed by Docker Sandboxes network policy with balanced enforcement.

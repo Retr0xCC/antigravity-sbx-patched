@@ -108,11 +108,11 @@ antigravity-sbx-patched/
 │   ├── sbxenv-media.yaml        # Мультимедиа-библиотеки, Jellyfin/Plex планировщик
 │   └── .env.example             # Переменные окружения (GEMINI_API_KEY)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
-    ├── antigravity/             # Базовый агент Antigravity (kind: sandbox)
-    ├── math-labs/               # Научные вычисления (kind: mixin)
-    ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin)
-    ├── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin)
-    └── media-operator/          # Медиа-пайплайн и классификатор (kind: mixin)
+    ├── antigravity/             # Базовый агент Antigravity (kind: workload, v3)
+    ├── math-labs/               # Научные вычисления (kind: mixin, v3)
+    ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin, v3)
+    ├── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin, v3)
+    └── media-operator/          # Медиа-пайплайн и классификатор (kind: mixin, v3)
 ```
 
 ### 2.1. Использование шаблонов (`sbxenv.yaml`)
@@ -143,17 +143,23 @@ kits:
 
 ### 2.2. Подключение Kits на лету
 
-При запуске песочницы можно на лету подключать mixin-киты с помощью флага `--kit`:
+Все киты в репозитории стандартизированы на **Docker Sandbox Kit Specification v3** (`# syntax=docker/sandbox-kit:3`), что гарантирует полную совместимость композиций в SBX без ошибок несовместимости версий (`cannot mix v3 kits with v1/v2 kits`).
+
+При создании или запуске песочницы можно подключать любые mixin-киты через флаг `--kit`:
 
 ```bash
-# Быстрый запуск агента shell с пропатченным Antigravity и mixin-китом
-sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
-  --kit ghcr.io/retr0xcc/math-labs-kit:latest
+# Создание песочницы с базовым китом Antigravity и миксином AFFiNE MCP (v3):
+sbx create --name merge "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 
-# Подключение нескольких наборов одновременно
-sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+# Подключение нескольких наборов одновременно:
+sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest \
   --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
+
+# Быстрый запуск агента shell с пропатченным шаблоном и mixin-китом:
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest
 ```
 
 ---

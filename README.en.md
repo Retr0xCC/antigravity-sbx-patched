@@ -108,11 +108,11 @@ antigravity-sbx-patched/
 │   ├── sbxenv-media.yaml        # Media pipeline, Jellyfin/Plex planner
 │   └── .env.example             # Environment variables (GEMINI_API_KEY)
 └── kits/                        # Modular SBX Kits (spec.yaml)
-    ├── antigravity/             # Base Antigravity agent definition (kind: sandbox)
-    ├── math-labs/               # Scientific computing mixin (kind: mixin)
-    ├── rpi-edge-node/           # Edge automation mixin (kind: mixin)
-    ├── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin)
-    └── media-operator/          # Media pipeline & classifier mixin (kind: mixin)
+    ├── antigravity/             # Base Antigravity agent definition (kind: workload, v3)
+    ├── math-labs/               # Scientific computing mixin (kind: mixin, v3)
+    ├── rpi-edge-node/           # Edge automation mixin (kind: mixin, v3)
+    ├── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin, v3)
+    └── media-operator/          # Media pipeline & classifier mixin (kind: mixin, v3)
 ```
 
 ### 2.1. Declarative Workspace Setup (`sbxenv.yaml`)
@@ -143,17 +143,23 @@ kits:
 
 ### 2.2. Attaching Kits Dynamically
 
-When launching a sandbox, you can dynamically stack mixin kits using `--kit`:
+All kits in this repository are standardized on **Docker Sandbox Kit Specification v3** (`# syntax=docker/sandbox-kit:3`), ensuring full composition compatibility in SBX without schema mixing errors (`cannot mix v3 kits with v1/v2 kits`).
+
+When creating or launching a sandbox, you can attach any mixin kits using `--kit`:
 
 ```bash
-# Launch shell agent with patched Antigravity and mixin kit
-sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
-  --kit ghcr.io/retr0xcc/math-labs-kit:latest
+# Create a sandbox with base Antigravity workload kit and AFFiNE MCP mixin (v3):
+sbx create --name merge "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
+  --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 
-# Stack multiple kits
-sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+# Stack multiple kits simultaneously:
+sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest \
   --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
+
+# Launch shell agent with patched template and mixin kit:
+sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest \
+  --kit ghcr.io/retr0xcc/math-labs-kit:latest
 ```
 
 ---
