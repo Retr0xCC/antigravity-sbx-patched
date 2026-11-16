@@ -18,16 +18,16 @@ This Kit enables **Model Context Protocol (MCP)** integration between **Antigrav
    ```
    *(Or add `./kits/affine-mcp` to the `kits` section in your `sbxenv.yaml`)*
 
-2. **Run the Setup Wizard:**
-   Inside the container, launch the configuration wizard:
+2. **Authenticate with AFFiNE:**
+   Inside the container, run:
    ```bash
-   ./kits/affine-mcp/affine-setup.sh
+   affine-mcp login
    ```
    * Paste your session `Cookie` header from `app.affine.pro` (F12 DevTools ➔ Network ➔ Request Headers ➔ `Cookie`).
    * Select your target workspace from the automatically discovered list.
 
 3. **CLI Utilities:**
-   * `./kits/affine-mcp/affine-setup.sh`: Interactive onboarding and configuration wizard.
+   * `affine-mcp login`: Interactive authentication with AFFiNE Cloud or Self-Hosted instance.
    * `affine-mcp doctor`: Test API connection, GraphQL endpoint, and WebSocket.
    * `affine-mcp workspaces`: List accessible account workspaces.
 
@@ -47,15 +47,15 @@ This Kit enables **Model Context Protocol (MCP)** integration between **Antigrav
    ```
    *(Или укажите `./kits/affine-mcp` в блоке `kits` вашего `sbxenv.yaml`)*
 
-2. **Запуск мастера настройки:**
+2. **Авторизация в AFFiNE:**
    Внутри запущенного контейнера выполните:
    ```bash
-   ./kits/affine-mcp/affine-setup.sh
+   affine-mcp login
    ```
    * Вставьте значение заголовка `Cookie` из `app.affine.pro` (F12 DevTools ➔ вкладка Network ➔ заголовок `Cookie`).
    * Выберите нужный воркспейс из списка автоматически найденных.
 
 3. **Команды управления:**
-   * `./kits/affine-mcp/affine-setup.sh`: Интерактивный мастер авторизации и настройки.
+   * `affine-mcp login`: Интерактивная авторизация в AFFiNE Cloud или Self-Hosted сервере.
    * `affine-mcp doctor`: Диагностика подключения к GraphQL и WebSocket.
    * `affine-mcp workspaces`: Список доступных рабочих пространств.

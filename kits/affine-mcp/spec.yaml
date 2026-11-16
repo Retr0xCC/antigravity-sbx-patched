@@ -53,5 +53,5 @@ capabilities:
       content: |
         This workspace is configured with the AFFiNE MCP Server.
         - Provides 112 MCP tools for managing docs, pages, databases, and CRDT blocks.
-        - To authenticate or reconfigure AFFiNE credentials, run './kits/affine-mcp/affine-setup.sh'.
+        - To authenticate or reconfigure AFFiNE credentials, run 'affine-mcp login'.
         - MCP configuration is stored in ~/.gemini/config/mcp_config.json.
