@@ -13,10 +13,13 @@
 
 ## PART 1. Image and Build Guide
 
-### 1.1. Key Highlights
+### 1.1. Key Highlights & Build Features
 
 * **Pre-Baked QNIX Patch**: Eligibility patch ([QNIX-Dev/eligibility-antigravity-patcher](https://github.com/QNIX-Dev/eligibility-antigravity-patcher)) is applied and verified at build time (`manager.py status cli -> status: patched`).
 * **Auto-Update Lockdown**: The executable `/home/agent/.local/bin/agy` is made read-only (`chmod 0555`), and `AGY_CLI_DISABLE_AUTO_UPDATE=true` is enforced.
+
+> [!IMPORTANT]
+> ⚠️ **Network Policies & Isolation**: Sandboxes enforce an **Internet-Only Isolation** model — outbound public Internet is fully permitted (package managers, APIs, git), while access to host services (`localhost`), local networks (LAN), and cloud metadata is strictly denied. See [Section 2.3. Network Policy: Internet-Only Isolation](#23-network-policy-internet-only-isolation-local-network-blocked) for detailed strategy and rules.
 
 ---
 
@@ -173,7 +176,7 @@ sbx run opencode . \
 
 ### 2.3. Network Policy: Internet-Only Isolation (Local Network Blocked)
 
-A common obstacle when running isolated AI coding agents is network restrictions: agents cannot install packages (`npm`, `pip`, `apt`, `cargo`), execute `curl`, query documentation, or fetch remote git repositories. Conversely, granting unrestricted access to local networks introduces security hazards such as internal network port-scanning, probing host services (`localhost`), or reaching cloud provider instance metadata.
+AI coding agents require outbound public Internet access (installing packages via `npm`, `pip`, `apt`, `cargo`, querying external APIs, cloning git repositories), while access to the host's local network (`localhost`, LAN) and cloud provider metadata is strictly blocked for security.
 
 Docker Sandboxes implements a native **Deny-First Precedence** network model:
 1. **When running as a Kit (`kits/antigravity/spec.yaml`)**:
