@@ -6,12 +6,24 @@ on:
       - main
     tags:
       - 'v*'
+  schedule:
+    # Check daily at 03:17 UTC (off-peak minute to avoid top-of-hour queue congestion)
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
       base_image:
         description: 'Upstream Base Image'
         required: true
         default: 'docker.io/sbx/antigravity-image:latest'
+      force_build:
+        description: 'Force rebuild even if upstream has not changed'
+        type: boolean
+        required: true
+        default: false
+
+concurrency:
+  group: build-and-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -28,16 +40,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry (GHCR)
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Determine image tags
         id: meta
         run: |
@@ -47,27 +49,63 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then
             TAGS="${TAGS},${IMAGE_LOWER}:${{ github.ref_name }}"
           fi
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-          echo "image_lower=${REPO_LOWER}" >> $GITHUB_OUTPUT
+          BASE_IMAGE="${{ github.event.inputs.base_image || 'docker.io/sbx/antigravity-image:latest' }}"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "image_lower=${REPO_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "base_image=${BASE_IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check upstream image and patcher for updates
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          FORCE_ARGS=""
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event.inputs.force_build }}" = "true" ] || [ "${{ steps.meta.outputs.base_image }}" != "docker.io/sbx/antigravity-image:latest" ]; then
+            FORCE_ARGS="--force"
+          fi
+          python3 ./ci/check_upstream.py \
+            --base-image "${{ steps.meta.outputs.base_image }}" \
+            --target-image "ghcr.io/${{ steps.meta.outputs.image_lower }}:latest" \
+            ${FORCE_ARGS}
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
+        if: steps.check.outputs.should_build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./ci/Dockerfile
+          pull: true
           push: true
+          provenance: false
           build-args: |
-            BASE_IMAGE=${{ github.event.inputs.base_image || 'docker.io/sbx/antigravity-image:latest' }}
+            BASE_IMAGE=${{ steps.meta.outputs.base_image }}
+            UPSTREAM_DIGEST=${{ steps.check.outputs.upstream_digest }}
+            PATCHER_SHA=${{ steps.check.outputs.patcher_sha }}
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Build and publish Media Operator Image
+        if: steps.check.outputs.should_build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./kits/media-operator
           file: ./kits/media-operator/Dockerfile
+          pull: true
           push: true
+          provenance: false
           build-args: |
             BASE_IMAGE=ghcr.io/${{ steps.meta.outputs.image_lower }}:latest
           tags: ghcr.io/${{ steps.meta.outputs.image_lower }}:media
@@ -75,6 +113,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and publish Antigravity Sandbox Kit (v3 Workload Kit)
+        if: steps.check.outputs.should_build == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -107,6 +146,7 @@ jobs:
             }
 
       - name: Build and publish Mixin Kits
+        if: steps.check.outputs.should_build == 'true'
         continue-on-error: true
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -117,3 +157,14 @@ jobs:
               -t "ghcr.io/${OWNER_LOWER}/${kit}-kit:latest" \
               --push || echo "Warning: Could not push ${kit}-kit directly (requires package write permissions)"
           done
+
+      - name: Prune old untagged GHCR versions
+        if: steps.check.outputs.should_build == 'true'
+        continue-on-error: true
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'antigravity-sbx-patched'
+          package-type: 'container'
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: '5'
+          token: ${{ secrets.GITHUB_TOKEN }}

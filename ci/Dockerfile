@@ -11,13 +11,23 @@ FROM ${BASE_IMAGE}
 
 ARG PATCHER_REPO=https://github.com/QNIX-Dev/eligibility-antigravity-patcher.git
 ARG PATCHER_REF=main
+ARG PATCHER_SHA=""
+ARG UPSTREAM_DIGEST=""
 
 USER root
 
 # Apply QNIX eligibility patch in-place using bleeding-edge patcher
 RUN set -eux; \
     rm -rf /tmp/patcher; \
+    echo "==> Cloning patcher (${PATCHER_REF}, target sha: ${PATCHER_SHA:-HEAD})..."; \
     git clone --depth 1 --branch "${PATCHER_REF}" "${PATCHER_REPO}" /tmp/patcher; \
+    if [ -n "${PATCHER_SHA}" ]; then \
+        ACTUAL_SHA="$(git -C /tmp/patcher rev-parse HEAD)"; \
+        if [ "${ACTUAL_SHA}" != "${PATCHER_SHA}" ]; then \
+            git -C /tmp/patcher fetch --depth 1 origin "${PATCHER_SHA}"; \
+            git -C /tmp/patcher checkout "${PATCHER_SHA}"; \
+        fi; \
+    fi; \
     \
     echo "==> Applying QNIX eligibility patch to /home/agent/.local/bin/agy..."; \
     python3 /tmp/patcher/manager.py patch cli --path-cli /home/agent/.local/bin/agy; \
@@ -43,6 +53,10 @@ RUN set -eux; \
 # Enforce disabling automatic updates so Google background updater never overwrites the patch
 ENV AGY_CLI_DISABLE_AUTO_UPDATE=true
 ENV PATH="/home/agent/.local/bin:${PATH}"
+
+LABEL org.opencontainers.image.source="https://github.com/Retr0xCC/antigravity-sbx-patched" \
+      io.antigravity.upstream.digest="${UPSTREAM_DIGEST}" \
+      io.antigravity.patcher.sha="${PATCHER_SHA}"
 
 USER agent
 WORKDIR /home/agent/workspace
