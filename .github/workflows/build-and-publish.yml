@@ -40,6 +40,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify kit markdown prompts are in sync
+        run: python3 ./ci/sync_prompts.py --check
+
       - name: Determine image tags
         id: meta
         run: |

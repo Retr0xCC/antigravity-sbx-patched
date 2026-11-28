@@ -16,6 +16,11 @@ echo "==> Building Antigravity SBX Patched image..."
 echo "    Base image: ${BASE_IMAGE}"
 echo "    Target tag: ${IMAGE_TAG}"
 
+if command -v python3 >/dev/null 2>&1; then
+    echo "==> Verifying kit prompt synchronization..."
+    python3 "${SCRIPT_DIR}/sync_prompts.py" --check
+fi
+
 DOCKER_CMD="docker"
 if ! command -v docker >/dev/null 2>&1; then
     if command -v podman >/dev/null 2>&1; then

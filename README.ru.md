@@ -217,6 +217,22 @@ sbx run opencode . \
    sbx policy deny network localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16
    ```
 
+### 2.4. Кастомные Markdown-промпты китов (`kits/<kit>/prompts/*.md`)
+
+Любой кит может содержать кастомные инструкции в формате `.md` внутри директории `kits/<kit>/prompts/*.md` (например, `kits/crawl4ai-searxng/prompts/mcp-research.md`).
+
+При создании песочницы с таким китом они автоматически устанавливаются нативным образом для каждого поддерживаемого агента:
+* **Google Antigravity (`agy`)**: `~/.gemini/config/rules/<name>.md` (по умолчанию `trigger: always_on`; поддерживаются также `trigger: model_decision`, `glob`, `manual` и `description` через необязательный YAML frontmatter)
+* **OpenCode (`opencode`)**: `~/.config/opencode/rules/<name>.md` с регистрацией пути в массиве `instructions` файла `~/.config/opencode/opencode.json`
+* **Claude Code (`claude`)**: `~/.claude/rules/<name>.md` (поддерживает опциональный `paths:` frontmatter)
+
+После добавления или изменения `.md`-файла в `kits/<kit>/prompts/` синхронизируйте `spec.yaml` (и `setup.sh`):
+```bash
+python3 ./ci/sync_prompts.py
+# Проверка без изменений (используется в CI и ci/build.sh):
+python3 ./ci/sync_prompts.py --check
+```
+
 ---
 
 ## Лицензия и отказ от ответственности

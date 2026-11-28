@@ -69,6 +69,12 @@ curl -fsS http://host.docker.internal:11235/health
 curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer ${CRAWL4AI_API_TOKEN}"
 ```
 
+### 4. Built-in Markdown Prompts (`prompts/*.md`)
+Custom `.md` guidelines in `kits/crawl4ai-searxng/prompts/` (starting with `prompts/mcp-research.md`) are embedded into `spec.yaml` via `python3 ./ci/sync_prompts.py` and automatically installed at sandbox startup as native global rules:
+* **Google Antigravity**: `~/.gemini/config/rules/<name>.md` (YAML frontmatter `trigger: always_on` by default)
+* **OpenCode**: `~/.config/opencode/rules/<name>.md` (added to `instructions` in `~/.config/opencode/opencode.json`)
+* **Claude Code**: `~/.claude/rules/<name>.md`
+
 ---
 
 <a name="русский"></a>
@@ -135,3 +141,9 @@ curl -fsS http://host.docker.internal:3000/health
 curl -fsS http://host.docker.internal:11235/health
 curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer ${CRAWL4AI_API_TOKEN}"
 ```
+
+### 4. Встроенные Markdown-промпты (`prompts/*.md`)
+Кастомные `.md`-инструкции в `kits/crawl4ai-searxng/prompts/` (первая — `prompts/mcp-research.md`) синхронизируются в `spec.yaml` через `python3 ./ci/sync_prompts.py` и при старте песочницы автоматически устанавливаются в нативные глобальные правила агентов:
+* **Google Antigravity**: `~/.gemini/config/rules/<name>.md` (по умолчанию с frontmatter `trigger: always_on`)
+* **OpenCode**: `~/.config/opencode/rules/<name>.md` (подключается в `instructions` в `~/.config/opencode/opencode.json`)
+* **Claude Code**: `~/.claude/rules/<name>.md`

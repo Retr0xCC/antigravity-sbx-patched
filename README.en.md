@@ -217,6 +217,22 @@ Docker Sandboxes implements a native **Deny-First Precedence** network model:
    sbx policy deny network localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16
    ```
 
+### 2.4. Custom Kit Markdown Prompts (`kits/<kit>/prompts/*.md`)
+
+Any kit can include custom `.md` guidelines under `kits/<kit>/prompts/*.md` (for example, `kits/crawl4ai-searxng/prompts/mcp-research.md`).
+
+When creating a sandbox with that kit, prompts are automatically installed using each agent's native global rules mechanism:
+* **Google Antigravity (`agy`)**: `~/.gemini/config/rules/<name>.md` (defaults to `trigger: always_on`; optional YAML frontmatter supports `trigger: model_decision | glob | manual`, `description`, and `globs`)
+* **OpenCode (`opencode`)**: `~/.config/opencode/rules/<name>.md` registered in the `instructions` array of `~/.config/opencode/opencode.json`
+* **Claude Code (`claude`)**: `~/.claude/rules/<name>.md` (preserves optional `paths:` frontmatter)
+
+After adding or editing `.md` files in `kits/<kit>/prompts/`, synchronize `spec.yaml` (and `setup.sh`):
+```bash
+python3 ./ci/sync_prompts.py
+# Check-only mode (enforced in CI and ci/build.sh):
+python3 ./ci/sync_prompts.py --check
+```
+
 ---
 
 ## License & Disclaimer

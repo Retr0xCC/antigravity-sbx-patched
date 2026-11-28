@@ -182,6 +182,12 @@ for k in ${KITS[@]+"${KITS[@]}"}; do
     CMD+=(--kit "$(resolve_kit_ref "${k}")")
 done
 
+if [[ "${SOURCE_MODE}" == "local" ]] && command -v python3 >/dev/null 2>&1; then
+    if ! python3 "${ROOT_DIR}/ci/sync_prompts.py" --check >/dev/null 2>&1; then
+        echo "Warning: local kit prompts are out of sync with spec.yaml; run 'python3 ./ci/sync_prompts.py' before launching." >&2
+    fi
+fi
+
 echo "==> Executing: ${CMD[*]}"
 if [[ "${DRY_RUN}" == "true" ]]; then
     exit 0
