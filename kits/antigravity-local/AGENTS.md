@@ -11,7 +11,7 @@ proxy swaps for the real key at Google's endpoints, and a startup hook sets
 nothing bound, that key is removed and `agy` falls back to its interactive
 Google sign-in.
 
-Egress is governed by Docker Sandboxes network policy: local networks, private
-RFC 1918 subnets, loopback, and cloud metadata remain blocked, while
-`host.docker.internal` is not globally denied so attached mixin kits (such as
-`crawl4ai-searxng`) can selectively allow specific host service ports.
+Egress is governed by Docker Sandboxes network policy: local LAN subnets (RFC 1918)
+and cloud metadata remain blocked, while `host.docker.internal` (normalized to
+`localhost` by the SBX proxy) is open only on specific host service ports
+explicitly allowed by attached mixin kits (such as `crawl4ai-searxng`).

@@ -17,8 +17,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 LOCAL_DENY_TARGETS="localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16"
-LOCAL_DENY_TARGETS_NO_HOST="localhost,*.local,*.lan,*.home.arpa,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16"
-HOST_SERVICES_ALLOW="host.docker.internal:3000,host.docker.internal:11235"
+LOCAL_DENY_TARGETS_NO_HOST="*.local,*.lan,*.home.arpa,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16"
+HOST_SERVICES_ALLOW="host.docker.internal:3000,host.docker.internal:11235,localhost:3000,localhost:11235"
 
 usage() {
     cat <<EOF
@@ -131,6 +131,8 @@ case "$MODE" in
             echo "  [*] Removing global/sandbox deny on host.docker.internal & *.internal (if present) and allowing host services..."
             sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "host.docker.internal" >/dev/null 2>&1 || true
             sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "*.internal" >/dev/null 2>&1 || true
+            sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "localhost" >/dev/null 2>&1 || true
+            sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "127.0.0.0/8" >/dev/null 2>&1 || true
             sbx policy allow network --sandbox "${SANDBOX_NAME}" "${HOST_SERVICES_ALLOW}"
         fi
 
@@ -149,6 +151,8 @@ case "$MODE" in
             echo -e "${BLUE}==> Removing existing deny rules for host.docker.internal & *.internal (if present)...${NC}"
             sbx policy rm network --resource "host.docker.internal" >/dev/null 2>&1 || true
             sbx policy rm network --resource "*.internal" >/dev/null 2>&1 || true
+            sbx policy rm network --resource "localhost" >/dev/null 2>&1 || true
+            sbx policy rm network --resource "127.0.0.0/8" >/dev/null 2>&1 || true
             sbx policy allow network "${HOST_SERVICES_ALLOW}"
         fi
 

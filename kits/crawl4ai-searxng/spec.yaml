@@ -16,6 +16,8 @@ capabilities:
         allow:
           - "host.docker.internal:3000"
           - "host.docker.internal:11235"
+          - "localhost:3000"
+          - "localhost:11235"
           - "registry.npmjs.org"
 
   - type: com.docker.sandbox/lifecycle@1

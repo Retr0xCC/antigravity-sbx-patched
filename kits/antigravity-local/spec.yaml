@@ -55,8 +55,10 @@ capabilities:
           - deb.debian.org:80
           - dhi.io:80
         deny:
-          # Block local/internal hostnames except host.docker.internal (left open for explicit mixin ports)
-          - "localhost"
+          # Block local/LAN hostnames, RFC 1918 subnets, and cloud metadata.
+          # Note: localhost / 127.0.0.0/8 / ::1 / host.docker.internal are omitted here
+          # because sbx normalizes host.docker.internal -> localhost during policy evaluation;
+          # without "*" in allow, default-deny-all still blocks all un-allowed host ports.
           - "*.local"
           - "*.lan"
           - "*.home.arpa"
@@ -64,11 +66,9 @@ capabilities:
           - "10.0.0.0/8"
           - "172.16.0.0/12"
           - "192.168.0.0/16"
-          # Block IPv4 loopback and cloud instance metadata service
-          - "127.0.0.0/8"
+          # Block cloud instance metadata service
           - "169.254.0.0/16"
-          # Block IPv6 loopback, ULA, and link-local unicast
-          - "::1"
+          # Block IPv6 ULA and link-local unicast
           - "fc00::/7"
           - "fe80::/10"
 
@@ -167,6 +167,6 @@ capabilities:
         nothing bound, that key is removed and `agy` falls back to its interactive
         Google sign-in.
 
-        Egress is governed by Docker Sandboxes network policy: local LAN subnets (RFC 1918),
-        loopback, and cloud metadata are blocked, while `host.docker.internal` is open only
-        on specific ports explicitly declared by attached mixin kits.
+        Egress is governed by Docker Sandboxes network policy: local LAN subnets (RFC 1918)
+        and cloud metadata are blocked, while host services via `host.docker.internal` are open
+        only on specific ports explicitly declared by attached mixin kits.
