@@ -139,4 +139,4 @@ capabilities:
         - Direct REST endpoints (if calling via curl/scripts):
           - SearXNG MCP health: `http://host.docker.internal:3000/health`
           - Crawl4AI REST API: `http://host.docker.internal:11235` (`/health`, `/crawl`, `/md`, `/mcp/schema`)
-        - Note: Because `kits/antigravity` blocks `host.docker.internal` by default (Deny-First Precedence), use `sbxenv-crawl4ai-searxng.yaml`, `sbx run shell`/`opencode`, or run `./ci/init-network.sh --allow-host-services` on the host.
+        - Note: Pair this mixin with `antigravity-local` (`kits/antigravity-local`) instead of strict `antigravity` (`kits/antigravity` denies `host.docker.internal` via Deny-First Precedence), or use `sbxenv-crawl4ai-searxng.yaml` / `shell` / `opencode`.

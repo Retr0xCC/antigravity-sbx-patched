@@ -114,6 +114,7 @@ antigravity-sbx-patched/
 │   └── .env.example             # Environment variables (GEMINI_API_KEY, OPENAI_API_KEY, etc.)
 └── kits/                        # Modular SBX Kits (spec.yaml)
     ├── antigravity/             # Base Antigravity agent definition (kind: workload, v3)
+    ├── antigravity-local/       # Antigravity workload permitting selective host services (kind: workload, v3)
     ├── math-labs/               # Scientific computing mixin (kind: mixin, v3)
     ├── rpi-edge-node/           # Edge automation mixin (kind: mixin, v3)
     ├── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin, v3)

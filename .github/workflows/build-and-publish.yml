@@ -145,6 +145,38 @@ jobs:
                 --push
             }
 
+      - name: Build and publish Antigravity Local Services Sandbox Kit (v3 Workload Kit)
+        if: steps.check.outputs.should_build == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          KIT_TARGET="ghcr.io/${OWNER_LOWER}/antigravity-local-kit:latest"
+          DOWNSTREAM_IMG="ghcr.io/${OWNER_LOWER}/antigravity-sbx-patched:latest"
+          TAG_ARGS=("-t" "${KIT_TARGET}")
+          EXTRA_ARGS=""
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            DOWNSTREAM_IMG="ghcr.io/${OWNER_LOWER}/antigravity-sbx-patched:${{ github.ref_name }}"
+            TAG_ARGS+=("-t" "ghcr.io/${OWNER_LOWER}/antigravity-local-kit:${{ github.ref_name }}")
+            EXTRA_ARGS="--additional-tags ${{ github.ref_name }}"
+          fi
+          echo "==> Building and publishing Antigravity Local v3 workload kit via Buildx..."
+          docker buildx build "./kits/antigravity-local" \
+            -f "./kits/antigravity-local/spec.yaml" \
+            --build-arg BASE_IMAGE="${DOWNSTREAM_IMG}" \
+            "${TAG_ARGS[@]}" \
+            --push || {
+              echo "Warning: Direct buildx push failed, retrying via package_kit.py fallback..."
+              python3 ./ci/package_kit.py \
+                --spec ./kits/antigravity-local/spec.yaml \
+                --downstream-image "${DOWNSTREAM_IMG}" \
+                --target "${KIT_TARGET}" \
+                --username "${{ github.actor }}" \
+                --token "${{ secrets.GITHUB_TOKEN }}" \
+                ${EXTRA_ARGS} \
+                --push
+            }
+
       - name: Build and publish Mixin Kits
         if: steps.check.outputs.should_build == 'true'
         continue-on-error: true

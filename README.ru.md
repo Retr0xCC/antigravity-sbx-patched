@@ -114,6 +114,7 @@ antigravity-sbx-patched/
 │   └── .env.example             # Переменные окружения (GEMINI_API_KEY, OPENAI_API_KEY и др.)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
     ├── antigravity/             # Базовый агент Antigravity (kind: workload, v3)
+    ├── antigravity-local/       # Агент Antigravity с доступом к локальным сервисам хоста (kind: workload, v3)
     ├── math-labs/               # Научные вычисления (kind: mixin, v3)
     ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin, v3)
     ├── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin, v3)

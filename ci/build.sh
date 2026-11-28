@@ -65,6 +65,20 @@ python3 "${SCRIPT_DIR}/package_kit.py" \
     --downstream-image "${IMAGE_TAG}" \
     --output-dir "${ROOT_DIR}/dist/antigravity-kit"
 
+echo "==> Building and tagging downstream Antigravity Local Sandbox Kit (v3)..."
+"${DOCKER_CMD}" buildx build \
+    "${ROOT_DIR}/kits/antigravity-local" \
+    -f "${ROOT_DIR}/kits/antigravity-local/spec.yaml" \
+    --build-arg BASE_IMAGE="${IMAGE_TAG}" \
+    -t "ghcr.io/retr0xcc/antigravity-local-kit:latest"
+
+echo "==> Packaging downstream Antigravity Local Sandbox Kit (OCI layout)..."
+python3 "${SCRIPT_DIR}/package_kit.py" \
+    --spec "${ROOT_DIR}/kits/antigravity-local/spec.yaml" \
+    --downstream-image "${IMAGE_TAG}" \
+    --target "ghcr.io/retr0xcc/antigravity-local-kit:latest" \
+    --output-dir "${ROOT_DIR}/dist/antigravity-local-kit"
+
 echo "==> Success! Images (${IMAGE_TAG}, ${MEDIA_TAG}) and kit artifacts are ready."
 echo "    Usage with sbx (local kit):"
 echo "      sbx run ./kits/antigravity"

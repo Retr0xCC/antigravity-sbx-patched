@@ -1,0 +1,172 @@
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
+displayName: Google Antigravity (Patched, Local Services)
+author: "Retr0xCC <retr0xcc@proton.me>"
+description: Google's agent-first development platform (agy with QNIX patch), permitting selective host.docker.internal access for local mixin services while keeping LAN and metadata blocked.
+sourceUrl: https://github.com/retr0xcc/antigravity-sbx-patched
+version: "1.0.0"
+licenses:
+  - LicenseRef-Proprietary
+
+kind: workload
+
+provides:
+  - "antigravity-local@1.0.0"
+
+dockerfile: ./Dockerfile
+
+args:
+  baseImage:
+    default: "ghcr.io/retr0xcc/antigravity-sbx-patched:latest"
+    description: "Downstream patched Antigravity image reference"
+    buildArg: BASE_IMAGE
+
+capabilities:
+  - type: com.docker.sandbox/sbx@1
+
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          # Explicit Google, Antigravity, GitHub, and base OS endpoints.
+          # Intentionally omits "*" so host.docker.internal stays closed except on
+          # specific ports explicitly allowed by attached mixin kits (e.g. crawl4ai-searxng).
+          - accounts.google.com:443
+          - oauth2.googleapis.com:443
+          - www.googleapis.com:443
+          - lh3.googleusercontent.com:443
+          - aicode.googleapis.com:443
+          - cloudcode-pa.googleapis.com:443
+          - daily-cloudcode-pa.googleapis.com:443
+          - generativelanguage.googleapis.com:443
+          - antigravity.google:443
+          - antigravity.google.com:443
+          - antigravity-unleash.goog:443
+          - play.googleapis.com:443
+          - safebrowsing.googleapis.com:443
+          - www.gstatic.com:443
+          - antigravity-cli-auto-updater-974169037036.us-central1.run.app:443
+          - storage.googleapis.com:443
+          - raw.githubusercontent.com:443
+          - github.com:443
+          - api.github.com:443
+          - objects.githubusercontent.com:443
+          - deb.debian.org:80
+          - dhi.io:80
+        deny:
+          # Block local/internal hostnames except host.docker.internal (left open for explicit mixin ports)
+          - "localhost"
+          - "*.local"
+          - "*.lan"
+          - "*.home.arpa"
+          # Block RFC 1918 IPv4 private subnets
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          # Block IPv4 loopback and cloud instance metadata service
+          - "127.0.0.0/8"
+          - "169.254.0.0/16"
+          # Block IPv6 loopback, ULA, and link-local unicast
+          - "::1"
+          - "fc00::/7"
+          - "fe80::/10"
+
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: Gemini API key for Antigravity's headless API-key mode
+    config:
+      service: google
+      phase: runtime
+      apiKey:
+        name: GEMINI_API_KEY
+        proxyManaged: true
+        inject:
+          - domain: generativelanguage.googleapis.com
+            header: x-goog-api-key
+            format: "%s"
+
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command: |
+            set -e
+            cfg="$HOME/.gemini/antigravity-cli/settings.json"
+            mkdir -p "$(dirname "$cfg")"
+            [ -s "$cfg" ] || echo '{}' > "$cfg"
+            if [ "${SBX_CRED_GOOGLE_MODE:-none}" = apikey ]; then
+              jq '.modelProvider = "gemini"' "$cfg" > "$cfg.tmp"
+            else
+              jq 'del(.modelProvider)' "$cfg" > "$cfg.tmp"
+            fi
+            mv "$cfg.tmp" "$cfg"
+          user: "1000"
+          env: [SBX_CRED_GOOGLE_MODE]
+          description: Select Gemini API-key mode only when a Google credential is available
+        - command: |
+            set -e
+            [ -n "$MCP_GATEWAY_URL" ] || exit 0
+            cfg="$HOME/.gemini/config/mcp_config.json"
+            mkdir -p "$(dirname "$cfg")"
+            [ -s "$cfg" ] || echo '{}' > "$cfg"
+            frag=/tmp/antigravity-mcp-gateway.json
+            cat > "$frag" <<EOF
+            {
+              "mcpServers": {
+                "mcp-gateway": {
+                  "serverUrl": "$MCP_GATEWAY_URL",
+                  "headers": {
+                    "Authorization": "Bearer $MCP_SENTINEL_TOKEN_NAME"
+                  }
+                }
+              }
+            }
+            EOF
+            jq -s '.[0] * .[1]' "$cfg" "$frag" > "$cfg.tmp"
+            mv "$cfg.tmp" "$cfg"
+            rm -f "$frag"
+          user: "1000"
+          env: [MCP_GATEWAY_URL, MCP_SENTINEL_TOKEN_NAME]
+          description: Register the sandbox MCP gateway in Antigravity's user configuration
+
+  - type: com.docker.sandbox/agent-sessions@1
+    config:
+      prompt: ["-p", "{{.Prompt}}"]
+      continue: ["--continue"]
+      resume: ["--conversation", "{{.SessionID}}"]
+
+  - type: com.docker.sandbox/agent-interactive-sessions@1
+    optional: true
+    config:
+      prompt: ["-i", "{{.Prompt}}"]
+      continue: ["--continue"]
+      resume: ["--conversation", "{{.SessionID}}"]
+
+  - type: com.docker.sandbox/acp@1
+    optional: true
+    description: Drive Antigravity sessions over the Agent Client Protocol
+    config:
+      agent: antigravity
+      command: [agy, acp, --dangerously-skip-permissions]
+
+  - type: com.docker.sandbox/agent-context@2
+    config:
+      filename: AGENTS.md
+      directory: /home/agent
+      content: |
+        # Google Antigravity (Patched, Local Host Services)
+
+        Google's Antigravity agent is available in this sandbox as `agy` with the QNIX
+        eligibility patch pre-baked. Run it from the shell or use it directly as your
+        primary coding agent.
+
+        Authentication has two modes and the sandbox picks between them for you: with
+        a Google credential bound, `GEMINI_API_KEY` carries a sentinel the egress
+        proxy swaps for the real key at Google's endpoints, and a startup hook sets
+        `modelProvider: gemini` in `~/.gemini/antigravity-cli/settings.json`. With
+        nothing bound, that key is removed and `agy` falls back to its interactive
+        Google sign-in.
+
+        Egress is governed by Docker Sandboxes network policy: local LAN subnets (RFC 1918),
+        loopback, and cloud metadata are blocked, while `host.docker.internal` is open only
+        on specific ports explicitly declared by attached mixin kits.

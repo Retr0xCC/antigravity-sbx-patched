@@ -30,26 +30,28 @@ In your host `docker-compose.yml`, bind the container ports to `127.0.0.1` so th
     # ...
 ```
 
-### 2. Allow Host Service Access in SBX Network Policy
+### 2. Launch with `antigravity-local` (or `sbxenv` / `opencode`)
 > [!IMPORTANT]
-> Docker Sandboxes enforces **Deny-First Precedence**. Because `kits/antigravity/spec.yaml` and the default `./ci/init-network.sh` explicitly deny `host.docker.internal` and `*.internal`, running `sbx run ./kits/antigravity --kit ./kits/crawl4ai-searxng` will block local host access unless those deny entries are removed.
-
-To keep RFC 1918 LAN subnets, `localhost`, and cloud metadata blocked while allowing `host.docker.internal` ports `3000` and `11235`, initialize the host policy with:
-
-```bash
-./ci/init-network.sh --allow-host-services
-```
-
-Then launch your sandbox using `sbx env` or `shell` / `opencode`:
+> Docker Sandboxes enforces **Deny-First Precedence**. The default `antigravity` workload kit (`kits/antigravity`) explicitly denies `host.docker.internal` and `*.internal`, which blocks local host services.
+> Use **`antigravity-local`** (`ghcr.io/retr0xcc/antigravity-local-kit:latest` or `./kits/antigravity-local`) instead: it keeps RFC 1918 LAN subnets, `localhost`, loopback, and cloud metadata blocked while omitting `"*"` and `host.docker.internal` from `deny`, so only the exact ports declared by `crawl4ai-searxng` (`3000`, `11235`) are opened.
 
 ```bash
-# Option A: Declarative workspace (Antigravity patched shell + Crawl4AI/SearXNG kit)
+# Option A (Recommended for Antigravity): Workload kit with local host service support
+sbx create --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
+  --kit ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
+sbx start -a deep-research
+
+# Or with local repository kits:
+sbx run ./kits/antigravity-local --kit ./kits/crawl4ai-searxng
+
+# Option B: Declarative workspace (Antigravity patched shell + Crawl4AI/SearXNG kit)
+# (If you previously ran ./ci/init-network.sh without flags, re-run with --allow-host-services)
 cp templates/sbxenv-crawl4ai-searxng.yaml /path/to/my-project/sbxenv.yaml
 cp templates/.env.example /path/to/my-project/.env
 # Set CRAWL4AI_API_TOKEN (if enabled on your Crawl4AI container) in .env
 cd /path/to/my-project && sbx env run
 
-# Option B: Direct shell or OpenCode launch
+# Option C: Direct shell or OpenCode launch
 sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest --kit ./kits/crawl4ai-searxng
 sbx run opencode . --kit ./kits/crawl4ai-searxng
 ```
@@ -96,26 +98,28 @@ curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer
     # ...
 ```
 
-### 2. Разрешение локального доступа к сервисам хоста в SBX
+### 2. Запуск с `antigravity-local` (или `sbxenv` / `opencode`)
 > [!IMPORTANT]
-> В Docker Sandboxes действует модель **Deny-First Precedence** (запрет имеет приоритет над разрешением). Поскольку `kits/antigravity/spec.yaml` и базовый `./ci/init-network.sh` явно блокируют `host.docker.internal` и `*.internal`, при запуске `sbx run ./kits/antigravity --kit ./kits/crawl4ai-searxng` доступ к хосту будет заблокирован, пока эти правила запрета активны.
-
-Чтобы оставить заблокированными LAN-подсети (RFC 1918), `localhost` и метаданные облака, но разрешить доступ к `host.docker.internal` (порты `3000` и `11235`), инициализируйте политику на хосте флагом `--allow-host-services`:
-
-```bash
-./ci/init-network.sh --allow-host-services
-```
-
-После этого запускайте песочницу через `sbx env` или `shell` / `opencode`:
+> В Docker Sandboxes действует модель **Deny-First Precedence** (запрет имеет приоритет над разрешением). Базовый workload-кит `antigravity` (`kits/antigravity`) жёстко блокирует `host.docker.internal` и `*.internal`.
+> Для работы с локальными контейнерами используйте **`antigravity-local`** (`ghcr.io/retr0xcc/antigravity-local-kit:latest` или `./kits/antigravity-local`): он сохраняет блокировку LAN-подсетей (RFC 1918), `localhost`, loopback и метаданных облака, не включает `"*"` и не запрещает `host.docker.internal`, открывая только порты из `crawl4ai-searxng` (`3000`, `11235`).
 
 ```bash
-# Вариант А: Декларативный шаблон (пропатченный agy + Crawl4AI/SearXNG кит)
+# Вариант А (рекомендуется для Antigravity): Workload-кит с поддержкой локальных сервисов
+sbx create --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
+  --kit ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
+sbx start -a deep-research
+
+# Или через локальные киты из репозитория:
+sbx run ./kits/antigravity-local --kit ./kits/crawl4ai-searxng
+
+# Вариант Б: Декларативный шаблон (пропатченный agy + Crawl4AI/SearXNG кит)
+# (Если ранее запускали ./ci/init-network.sh без флагов — выполните ./ci/init-network.sh --allow-host-services)
 cp templates/sbxenv-crawl4ai-searxng.yaml /path/to/my-project/sbxenv.yaml
 cp templates/.env.example /path/to/my-project/.env
 # Укажите CRAWL4AI_API_TOKEN (если включен на контейнере Crawl4AI) в .env
 cd /path/to/my-project && sbx env run
 
-# Вариант Б: Быстрый запуск через shell или OpenCode
+# Вариант В: Быстрый запуск через shell или OpenCode
 sbx run shell . --template ghcr.io/retr0xcc/antigravity-sbx-patched:latest --kit ./kits/crawl4ai-searxng
 sbx run opencode . --kit ./kits/crawl4ai-searxng
 ```
