@@ -17,6 +17,8 @@ Thumbs.db
 sbxenv.yaml
 .sbx/
 .env
+.env.*
+!.env.example
 dist/
 
 # Dev Container Antigravity Sandbox (Isolated)

@@ -37,9 +37,8 @@ In your host `docker-compose.yml`, bind the container ports to `127.0.0.1` so th
 
 ```bash
 # Option A (Recommended for Antigravity): Workload kit with local host service support
-sbx create --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
+sbx run --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
   --kit ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
-sbx start -a deep-research
 
 # Or with local repository kits:
 sbx run ./kits/antigravity-local --kit ./kits/crawl4ai-searxng
@@ -105,9 +104,8 @@ curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer
 
 ```bash
 # Вариант А (рекомендуется для Antigravity): Workload-кит с поддержкой локальных сервисов
-sbx create --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
+sbx run --name deep-research "ghcr.io/retr0xcc/antigravity-local-kit:latest" /path/to/my-project \
   --kit ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
-sbx start -a deep-research
 
 # Или через локальные киты из репозитория:
 sbx run ./kits/antigravity-local --kit ./kits/crawl4ai-searxng

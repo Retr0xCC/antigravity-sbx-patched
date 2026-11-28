@@ -159,6 +159,10 @@ When creating or launching a sandbox, you can attach any mixin kits using `--kit
 sbx create --name merge "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 
+# Or via ci/create-sandbox.sh (automatically passes ./.env via --env-file
+# and selects antigravity-local when crawl4ai-searxng is attached):
+./ci/create-sandbox.sh --name deep-research --kit crawl4ai-searxng /path/to/project --start
+
 # Stack multiple kits simultaneously:
 sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest \

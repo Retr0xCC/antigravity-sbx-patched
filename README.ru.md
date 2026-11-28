@@ -159,6 +159,10 @@ kits:
 sbx create --name merge "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/affine-mcp-kit:latest
 
+# Или через обёртку ci/create-sandbox.sh (автоматически подхватывает ./.env через --env-file
+# и сам выбирает antigravity-local при подключении crawl4ai-searxng):
+./ci/create-sandbox.sh --name deep-research --kit crawl4ai-searxng /path/to/project --start
+
 # Подключение нескольких наборов одновременно:
 sbx create --name full-stack "ghcr.io/retr0xcc/antigravity-kit:latest" /path/to/project \
   --kit ghcr.io/retr0xcc/math-labs-kit:latest \

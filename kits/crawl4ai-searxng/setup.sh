@@ -7,10 +7,17 @@ set -euo pipefail
 
 echo "==> [sbx-kit:crawl4ai-searxng] Setting up local SearXNG & Crawl4AI MCP integration..."
 
-SEARXNG_MCP_URL="${SEARXNG_MCP_URL:-http://host.docker.internal:3000/mcp}"
-CRAWL4AI_URL="${CRAWL4AI_URL:-http://host.docker.internal:11235}"
+strip_quotes() {
+    local v="$1"
+    v="${v#\"}" ; v="${v%\"}"
+    v="${v#\'}" ; v="${v%\'}"
+    printf '%s' "$v"
+}
+
+SEARXNG_MCP_URL="$(strip_quotes "${SEARXNG_MCP_URL:-http://host.docker.internal:3000/mcp}")"
+CRAWL4AI_URL="$(strip_quotes "${CRAWL4AI_URL:-http://host.docker.internal:11235}")"
 CRAWL4AI_URL="${CRAWL4AI_URL%/}"
-TOKEN="${CRAWL4AI_API_TOKEN:-${CRAWL4AI_SECRET_TOKEN:-}}"
+TOKEN="$(strip_quotes "${CRAWL4AI_API_TOKEN:-${CRAWL4AI_SECRET_TOKEN:-}}")"
 
 export PATH="${HOME}/.local/bin:${PATH}"
 
@@ -26,8 +33,10 @@ cat > "${BRIDGE_BIN}" <<'EOF'
 set -euo pipefail
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:$PATH"
 URL="${CRAWL4AI_URL:-http://host.docker.internal:11235}"
+URL="${URL#\"}" ; URL="${URL%\"}"
 URL="${URL%/}"
 TOKEN="${CRAWL4AI_API_TOKEN:-${CRAWL4AI_SECRET_TOKEN:-}}"
+TOKEN="${TOKEN#\"}" ; TOKEN="${TOKEN%\"}"
 ARGS=("${URL}/mcp/sse" --allow-http --transport sse-only)
 if [ -n "${TOKEN}" ]; then
     ARGS+=(--header "Authorization: Bearer ${TOKEN}")
