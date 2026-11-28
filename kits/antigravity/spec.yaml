@@ -130,6 +130,14 @@ capabilities:
           user: "1000"
           env: [MCP_GATEWAY_URL, MCP_SENTINEL_TOKEN_NAME]
           description: Register the sandbox MCP gateway in Antigravity's user configuration
+        - command: |
+            set -e
+            mkdir -p "$HOME/.gemini"
+            if [ ! -e "$HOME/AGENTS.md" ] && [ ! -L "$HOME/AGENTS.md" ]; then
+              ln -s "$HOME/.gemini/GEMINI.md" "$HOME/AGENTS.md"
+            fi
+          user: "1000"
+          description: Expose ~/.gemini/GEMINI.md at ~/AGENTS.md for cross-agent compatibility
 
   - type: com.docker.sandbox/agent-sessions@1
     config:
@@ -153,8 +161,8 @@ capabilities:
 
   - type: com.docker.sandbox/agent-context@2
     config:
-      filename: AGENTS.md
-      directory: /home/agent
+      filename: GEMINI.md
+      directory: /home/agent/.gemini
       content: |
         # Google Antigravity (Patched)
 

@@ -222,9 +222,9 @@ sbx run opencode . \
 Любой кит может содержать кастомные инструкции в формате `.md` внутри директории `kits/<kit>/prompts/*.md` (например, `kits/crawl4ai-searxng/prompts/mcp-research.md`).
 
 При создании песочницы с таким китом они автоматически устанавливаются нативным образом для каждого поддерживаемого агента:
-* **Google Antigravity (`agy`)**: `~/.gemini/config/rules/<name>.md` (по умолчанию `trigger: always_on`; поддерживаются также `trigger: model_decision`, `glob`, `manual` и `description` через необязательный YAML frontmatter)
-* **OpenCode (`opencode`)**: `~/.config/opencode/rules/<name>.md` с регистрацией пути в массиве `instructions` файла `~/.config/opencode/opencode.json`
-* **Claude Code (`claude`)**: `~/.claude/rules/<name>.md` (поддерживает опциональный `paths:` frontmatter)
+* **Google Antigravity (`agy`)**: плагин `~/.gemini/config/plugins/<kit>/` (`plugin.json` + `rules/AGENTS.md` для `always_on` без лишнего frontmatter; опциональный YAML frontmatter поддерживает `trigger: model_decision | glob | manual`, `description`, `globs`, а также `type: skill` -> `skills/<name>/SKILL.md`)
+* **OpenCode (`opencode`)**: `~/.config/opencode/rules/<name>.md` с регистрацией пути в массиве `instructions` файла `~/.config/opencode/opencode.json` (и `~/.config/opencode/skills/<name>/SKILL.md` для `type: skill`)
+* **Claude Code (`claude`)**: `~/.claude/rules/<name>.md` (поддерживает опциональный `paths:` frontmatter) и `~/.claude/skills/<name>/SKILL.md` для `type: skill`
 
 После добавления или изменения `.md`-файла в `kits/<kit>/prompts/` синхронизируйте `spec.yaml` (и `setup.sh`):
 ```bash

@@ -70,10 +70,10 @@ curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer
 ```
 
 ### 4. Built-in Markdown Prompts (`prompts/*.md`)
-Custom `.md` guidelines in `kits/crawl4ai-searxng/prompts/` (starting with `prompts/mcp-research.md`) are embedded into `spec.yaml` via `python3 ./ci/sync_prompts.py` and automatically installed at sandbox startup as native global rules:
-* **Google Antigravity**: `~/.gemini/config/rules/<name>.md` (YAML frontmatter `trigger: always_on` by default)
-* **OpenCode**: `~/.config/opencode/rules/<name>.md` (added to `instructions` in `~/.config/opencode/opencode.json`)
-* **Claude Code**: `~/.claude/rules/<name>.md`
+Custom `.md` guidelines in `kits/crawl4ai-searxng/prompts/` (starting with `prompts/mcp-research.md`) are embedded into `spec.yaml` via `python3 ./ci/sync_prompts.py` and automatically installed at sandbox startup as native agent customizations:
+* **Google Antigravity**: `~/.gemini/config/plugins/crawl4ai-searxng/` (`plugin.json` + `rules/AGENTS.md` for always-on prompts, `rules/<name>.md` for conditional rules, `skills/<name>/SKILL.md` for `type: skill`)
+* **OpenCode**: `~/.config/opencode/rules/<name>.md` (added to `instructions` in `~/.config/opencode/opencode.json`) and `~/.config/opencode/skills/<name>/SKILL.md`
+* **Claude Code**: `~/.claude/rules/<name>.md` and `~/.claude/skills/<name>/SKILL.md`
 
 ---
 
@@ -143,7 +143,7 @@ curl -fsS http://host.docker.internal:11235/mcp/schema -H "Authorization: Bearer
 ```
 
 ### 4. Встроенные Markdown-промпты (`prompts/*.md`)
-Кастомные `.md`-инструкции в `kits/crawl4ai-searxng/prompts/` (первая — `prompts/mcp-research.md`) синхронизируются в `spec.yaml` через `python3 ./ci/sync_prompts.py` и при старте песочницы автоматически устанавливаются в нативные глобальные правила агентов:
-* **Google Antigravity**: `~/.gemini/config/rules/<name>.md` (по умолчанию с frontmatter `trigger: always_on`)
-* **OpenCode**: `~/.config/opencode/rules/<name>.md` (подключается в `instructions` в `~/.config/opencode/opencode.json`)
-* **Claude Code**: `~/.claude/rules/<name>.md`
+Кастомные `.md`-инструкции в `kits/crawl4ai-searxng/prompts/` (первая — `prompts/mcp-research.md`) синхронизируются в `spec.yaml` через `python3 ./ci/sync_prompts.py` и при старте песочницы автоматически устанавливаются нативно для каждого агента:
+* **Google Antigravity**: плагин `~/.gemini/config/plugins/crawl4ai-searxng/` (`plugin.json` + `rules/AGENTS.md` для постоянных промптов, `rules/<name>.md` для условных правил, `skills/<name>/SKILL.md` для `type: skill`)
+* **OpenCode**: `~/.config/opencode/rules/<name>.md` (подключается в `instructions` в `~/.config/opencode/opencode.json`) и `~/.config/opencode/skills/<name>/SKILL.md`
+* **Claude Code**: `~/.claude/rules/<name>.md` и `~/.claude/skills/<name>/SKILL.md`

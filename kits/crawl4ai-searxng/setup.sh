@@ -115,26 +115,55 @@ if command -v jq >/dev/null 2>&1; then
 fi
 
 # BEGIN GENERATED PROMPTS (managed by ci/sync_prompts.py - do not edit manually)
+kit_plugin_dir="$HOME/.gemini/config/plugins/crawl4ai-searxng"
+rm -rf "$kit_plugin_dir/rules" "$kit_plugin_dir/skills"
+mkdir -p "$kit_plugin_dir"
+cat <<'__SBX_PROMPT_CRAWL4AI_SEARXNG_PLUGIN_JSON__' > "$kit_plugin_dir/plugin.json"
+{
+  "name": "crawl4ai-searxng",
+  "version": "1.0.0",
+  "description": "Local web search (SearXNG MCP) and headless browser scraping (Crawl4AI) via host.docker.internal"
+}
+__SBX_PROMPT_CRAWL4AI_SEARXNG_PLUGIN_JSON__
 install_kit_prompt() {
-  local name="$1" trigger="$2" desc_yaml="$3" globs_yaml="$4" claude_paths_yaml="$5" body_file="$6"
-  local agy_dir="$HOME/.gemini/config/rules"
-  local oc_dir="$HOME/.config/opencode/rules"
-  local claude_dir="$HOME/.claude/rules"
-  mkdir -p "$agy_dir"
-  {
-    printf "%s\n" "---"
-    printf "trigger: %s\n" "$trigger"
-    [ -n "$desc_yaml" ] && printf "description: %s\n" "$desc_yaml"
-    [ -n "$globs_yaml" ] && printf "globs: %s\n" "$globs_yaml"
-    printf "%s\n\n" "---"
-    cat "$body_file"
-  } > "$agy_dir/${name}.md"
+  local name="$1" kind="$2" trigger="$3" desc_yaml="$4" globs_yaml="$5" claude_paths_yaml="$6" body_file="$7"
+  local oc_rules_dir="$HOME/.config/opencode/rules"
+  local claude_rules_dir="$HOME/.claude/rules"
+  if [ "$kind" = "skill" ]; then
+    local agy_skill_dir="$kit_plugin_dir/skills/$name"
+    local oc_skill_dir="$HOME/.config/opencode/skills/$name"
+    local claude_skill_dir="$HOME/.claude/skills/$name"
+    mkdir -p "$agy_skill_dir" "$oc_skill_dir" "$claude_skill_dir"
+    {
+      printf "%s\nname: %s\ndescription: %s\n%s\n\n" "---" "$name" "$desc_yaml" "---"
+      cat "$body_file"
+    } > "$agy_skill_dir/SKILL.md"
+    cp "$agy_skill_dir/SKILL.md" "$oc_skill_dir/SKILL.md"
+    cp "$agy_skill_dir/SKILL.md" "$claude_skill_dir/SKILL.md"
+    return 0
+  fi
+  mkdir -p "$kit_plugin_dir/rules"
   if [ "$trigger" = "always_on" ]; then
-    mkdir -p "$oc_dir"
-    cp "$body_file" "$oc_dir/${name}.md"
+    if [ -s "$kit_plugin_dir/rules/AGENTS.md" ]; then
+      printf "\n---\n\n" >> "$kit_plugin_dir/rules/AGENTS.md"
+    fi
+    cat "$body_file" >> "$kit_plugin_dir/rules/AGENTS.md"
+  else
+    {
+      printf "%s\n" "---"
+      printf "trigger: %s\n" "$trigger"
+      [ -n "$desc_yaml" ] && printf "description: %s\n" "$desc_yaml"
+      [ -n "$globs_yaml" ] && printf "globs: %s\n" "$globs_yaml"
+      printf "%s\n\n" "---"
+      cat "$body_file"
+    } > "$kit_plugin_dir/rules/${name}.md"
+  fi
+  if [ "$trigger" = "always_on" ]; then
+    mkdir -p "$oc_rules_dir"
+    cp "$body_file" "$oc_rules_dir/${name}.md"
     if command -v jq >/dev/null 2>&1; then
       local oc_cfg="$HOME/.config/opencode/opencode.json"
-      local oc_rule="$oc_dir/${name}.md"
+      local oc_rule="$oc_rules_dir/${name}.md"
       mkdir -p "$(dirname "$oc_cfg")"
       [ -s "$oc_cfg" ] || echo '{"$schema":"https://opencode.ai/config.json","mcp":{}}' > "$oc_cfg"
       jq --arg p "$oc_rule" '.instructions = (((.instructions // []) + [$p]) | unique)' "$oc_cfg" > "$oc_cfg.tmp"
@@ -142,13 +171,13 @@ install_kit_prompt() {
     fi
   fi
   if [ "$trigger" = "always_on" ] || { [ "$trigger" = "glob" ] && [ -n "$claude_paths_yaml" ]; }; then
-    mkdir -p "$claude_dir"
+    mkdir -p "$claude_rules_dir"
     {
       if [ -n "$claude_paths_yaml" ]; then
         printf "%s\npaths:\n%b---\n\n" "---" "$claude_paths_yaml"
       fi
       cat "$body_file"
-    } > "$claude_dir/${name}.md"
+    } > "$claude_rules_dir/${name}.md"
   fi
 }
 tmp_prompt_body="$(mktemp)"
@@ -215,7 +244,7 @@ Use the `searxng` and `crawl4ai` MCP servers strictly according to their verifie
 - Format user-facing dates cleanly (e.g., `ДД.ММ.ГГГГ`) and distinguish `подтверждено первоисточником` / `подтверждено вторичным источником` / `не подтверждено`.
 - Cite opened pages with URL and access date; never cite an unopened search snippet as page content without marking it `«по данным поиска, страницу не открывал»`.
 __SBX_PROMPT_MCP_RESEARCH__
-install_kit_prompt 'mcp-research' 'always_on' '"MCP WEB RESEARCH & SCRAPING GUIDELINES (SearXNG · Crawl4AI)"' '' '' "$tmp_prompt_body"
+install_kit_prompt 'mcp-research' 'rule' 'always_on' '"MCP WEB RESEARCH & SCRAPING GUIDELINES (SearXNG · Crawl4AI)"' '' '' "$tmp_prompt_body"
 rm -f "$tmp_prompt_body"
 trap - EXIT
 # END GENERATED PROMPTS
