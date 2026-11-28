@@ -110,13 +110,15 @@ antigravity-sbx-patched/
 │   ├── sbxenv-edge.yaml         # Ansible, Go, linters
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
 │   ├── sbxenv-media.yaml        # Media pipeline, Jellyfin/Plex planner
+│   ├── sbxenv-crawl4ai-searxng.yaml # Local SearXNG MCP (:3000) & Crawl4AI (:11235)
 │   └── .env.example             # Environment variables (GEMINI_API_KEY, OPENAI_API_KEY, etc.)
 └── kits/                        # Modular SBX Kits (spec.yaml)
     ├── antigravity/             # Base Antigravity agent definition (kind: workload, v3)
     ├── math-labs/               # Scientific computing mixin (kind: mixin, v3)
     ├── rpi-edge-node/           # Edge automation mixin (kind: mixin, v3)
     ├── affine-mcp/              # AFFiNE MCP server mixin (kind: mixin, v3)
-    └── media-operator/          # Media pipeline & classifier mixin (kind: mixin, v3)
+    ├── media-operator/          # Media pipeline & classifier mixin (kind: mixin, v3)
+    └── crawl4ai-searxng/        # Local SearXNG search + Crawl4AI scraping mixin (kind: mixin, v3)
 ```
 
 ### 2.1. Declarative Workspace Setup (`sbxenv.yaml`)
@@ -196,6 +198,9 @@ Docker Sandboxes implements a native **Deny-First Precedence** network model:
 
    # Or scope the policy to an individual sandbox:
    ./ci/init-network.sh --sandbox my-sandbox
+
+   # Allow host.docker.internal (:3000/:11235 for crawl4ai-searxng) while keeping LAN/metadata blocked:
+   ./ci/init-network.sh --allow-host-services
 
    # Check active policy rules:
    ./ci/init-network.sh --status

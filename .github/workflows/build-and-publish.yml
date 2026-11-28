@@ -150,7 +150,7 @@ jobs:
         continue-on-error: true
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          for kit in math-labs rpi-edge-node affine-mcp media-operator; do
+          for kit in math-labs rpi-edge-node affine-mcp media-operator crawl4ai-searxng; do
             echo "==> Building and publishing mixin kit ${kit}..."
             docker buildx build "./kits/${kit}" \
               -f "./kits/${kit}/spec.yaml" \

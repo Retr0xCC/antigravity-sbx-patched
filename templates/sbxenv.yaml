@@ -28,6 +28,7 @@ kits:
   # - ghcr.io/retr0xcc/rpi-edge-node-kit:latest
   # - ghcr.io/retr0xcc/affine-mcp-kit:latest
   # - ghcr.io/retr0xcc/media-operator-kit:latest
+  # - ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
 
 # Environment Variables
 env:

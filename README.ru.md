@@ -110,13 +110,15 @@ antigravity-sbx-patched/
 │   ├── sbxenv-edge.yaml         # Ansible, Go, линтеры
 │   ├── sbxenv-affine.yaml       # Node.js 22 LTS, AFFiNE MCP Server
 │   ├── sbxenv-media.yaml        # Мультимедиа-библиотеки, Jellyfin/Plex планировщик
+│   ├── sbxenv-crawl4ai-searxng.yaml # Локальный SearXNG MCP (:3000) и Crawl4AI (:11235)
 │   └── .env.example             # Переменные окружения (GEMINI_API_KEY, OPENAI_API_KEY и др.)
 └── kits/                        # Модульные SBX Kits (spec.yaml)
     ├── antigravity/             # Базовый агент Antigravity (kind: workload, v3)
     ├── math-labs/               # Научные вычисления (kind: mixin, v3)
     ├── rpi-edge-node/           # Edge-автоматизация (kind: mixin, v3)
     ├── affine-mcp/              # MCP-сервер AFFiNE (kind: mixin, v3)
-    └── media-operator/          # Медиа-пайплайн и классификатор (kind: mixin, v3)
+    ├── media-operator/          # Медиа-пайплайн и классификатор (kind: mixin, v3)
+    └── crawl4ai-searxng/        # Локальный веб-поиск SearXNG + скрейпинг Crawl4AI (kind: mixin, v3)
 ```
 
 ### 2.1. Использование шаблонов (`sbxenv.yaml`)
@@ -196,6 +198,9 @@ sbx run opencode . \
 
    # Или применение политики к конкретной песочнице:
    ./ci/init-network.sh --sandbox my-sandbox
+
+   # Разрешить локальный доступ к host.docker.internal (:3000/:11235 для crawl4ai-searxng), сохранив блокировку LAN/метаданных:
+   ./ci/init-network.sh --allow-host-services
 
    # Проверка активных правил:
    ./ci/init-network.sh --status

@@ -1,0 +1,142 @@
+# syntax=docker/sandbox-kit:3
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/sandbox-kit-spec/main/schema/kit.schema.json
+schemaVersion: "3"
+kind: mixin
+displayName: Crawl4AI & SearXNG Local MCP
+description: Local web search (SearXNG MCP) and headless browser scraping (Crawl4AI) via host.docker.internal
+version: "1.0.0"
+
+requires:
+  - deb/jq
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - "host.docker.internal:3000"
+          - "host.docker.internal:11235"
+          - "registry.npmjs.org"
+
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup:
+        - command: |
+            set -e
+            SEARXNG_MCP_URL="${SEARXNG_MCP_URL:-http://host.docker.internal:3000/mcp}"
+            CRAWL4AI_URL="${CRAWL4AI_URL:-http://host.docker.internal:11235}"
+            CRAWL4AI_URL="${CRAWL4AI_URL%/}"
+            TOKEN="${CRAWL4AI_API_TOKEN:-${CRAWL4AI_SECRET_TOKEN:-}}"
+
+            export PATH="$HOME/.local/bin:$PATH"
+            if ! grep -qs 'export PATH="\$HOME/\.local/bin:\$PATH"' "$HOME/.bashrc" 2>/dev/null; then
+              echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+            fi
+            if [ -w "/etc/sandbox-persistent.sh" ] && ! grep -qs 'export PATH="\$HOME/\.local/bin:\$PATH"' /etc/sandbox-persistent.sh 2>/dev/null; then
+              echo 'export PATH="$HOME/.local/bin:$PATH"' >> /etc/sandbox-persistent.sh
+            fi
+
+            if ! command -v mcp-remote >/dev/null 2>&1; then
+              npm install -g --ignore-scripts mcp-remote
+            fi
+
+            mkdir -p "$HOME/.local/bin"
+            bridge_bin="$HOME/.local/bin/crawl4ai-mcp-bridge"
+            cat > "$bridge_bin" <<'EOF'
+            #!/usr/bin/env bash
+            set -euo pipefail
+            export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:/usr/local/bin:$PATH"
+            URL="${CRAWL4AI_URL:-http://host.docker.internal:11235}"
+            URL="${URL%/}"
+            TOKEN="${CRAWL4AI_API_TOKEN:-${CRAWL4AI_SECRET_TOKEN:-}}"
+            ARGS=("${URL}/mcp/sse" --allow-http --transport sse-only)
+            if [ -n "${TOKEN}" ]; then
+              ARGS+=(--header "Authorization: Bearer ${TOKEN}")
+            fi
+            exec mcp-remote "${ARGS[@]}"
+            EOF
+            chmod 0755 "$bridge_bin"
+
+            c4_env="$(jq -n --arg c4url "$CRAWL4AI_URL" --arg token "$TOKEN" \
+              '{"CRAWL4AI_URL": $c4url} + (if $token != "" then {"CRAWL4AI_API_TOKEN": $token} else {} end)')"
+
+            # 1. Register for Google Antigravity
+            gemini_cfg="$HOME/.gemini/config/mcp_config.json"
+            mkdir -p "$(dirname "$gemini_cfg")"
+            [ -s "$gemini_cfg" ] || echo '{}' > "$gemini_cfg"
+            frag_gemini=/tmp/crawl4ai-searxng-gemini.json
+            jq -n --arg searx_url "$SEARXNG_MCP_URL" --arg bridge "$bridge_bin" --argjson env "$c4_env" '{
+              mcpServers: {
+                searxng: {
+                  url: $searx_url
+                },
+                crawl4ai: {
+                  command: $bridge,
+                  args: [],
+                  env: $env
+                }
+              }
+            }' > "$frag_gemini"
+            jq -s '.[0] * .[1]' "$gemini_cfg" "$frag_gemini" > "$gemini_cfg.tmp"
+            mv "$gemini_cfg.tmp" "$gemini_cfg"
+            rm -f "$frag_gemini"
+
+            # 2. Register for OpenCode
+            opencode_cfg="$HOME/.config/opencode/opencode.json"
+            mkdir -p "$(dirname "$opencode_cfg")"
+            [ -s "$opencode_cfg" ] || echo '{"$schema":"https://opencode.ai/config.json","mcp":{}}' > "$opencode_cfg"
+            frag_opencode=/tmp/crawl4ai-searxng-opencode.json
+            jq -n --arg searx_url "$SEARXNG_MCP_URL" --arg bridge "$bridge_bin" --argjson env "$c4_env" '{
+              mcp: {
+                searxng: {
+                  type: "remote",
+                  url: $searx_url,
+                  enabled: true
+                },
+                crawl4ai: {
+                  type: "local",
+                  command: [$bridge],
+                  enabled: true,
+                  environment: $env
+                }
+              }
+            }' > "$frag_opencode"
+            jq -s '.[0] * .[1]' "$opencode_cfg" "$frag_opencode" > "$opencode_cfg.tmp"
+            mv "$opencode_cfg.tmp" "$opencode_cfg"
+            rm -f "$frag_opencode"
+
+            # 3. Register for Claude Code
+            claude_cfg="$HOME/.claude.json"
+            mkdir -p "$(dirname "$claude_cfg")"
+            [ -s "$claude_cfg" ] || echo '{}' > "$claude_cfg"
+            frag_claude=/tmp/crawl4ai-searxng-claude.json
+            jq -n --arg searx_url "$SEARXNG_MCP_URL" --arg bridge "$bridge_bin" --argjson env "$c4_env" '{
+              mcpServers: {
+                searxng: {
+                  type: "http",
+                  url: $searx_url
+                },
+                crawl4ai: {
+                  command: $bridge,
+                  args: [],
+                  env: $env
+                }
+              }
+            }' > "$frag_claude"
+            jq -s '.[0] * .[1]' "$claude_cfg" "$frag_claude" > "$claude_cfg.tmp"
+            mv "$claude_cfg.tmp" "$claude_cfg"
+            rm -f "$frag_claude"
+          user: "1000"
+          env: [SEARXNG_MCP_URL, CRAWL4AI_URL, CRAWL4AI_API_TOKEN, CRAWL4AI_SECRET_TOKEN]
+          description: Register local SearXNG and Crawl4AI MCP servers across Antigravity, OpenCode, and Claude configurations
+
+  - type: com.docker.sandbox/agent-context@2
+    config:
+      content: |
+        This workspace is configured with local SearXNG and Crawl4AI MCP servers via host.docker.internal.
+        - `searxng` MCP server (Streamable HTTP): connects to `$SEARXNG_MCP_URL` (default `http://host.docker.internal:3000/mcp`).
+        - `crawl4ai` MCP server (SSE via `~/.local/bin/crawl4ai-mcp-bridge`): connects to `$CRAWL4AI_URL/mcp/sse` (default `http://host.docker.internal:11235/mcp/sse`), passing `Authorization: Bearer $CRAWL4AI_API_TOKEN` when configured.
+        - Direct REST endpoints (if calling via curl/scripts):
+          - SearXNG MCP health: `http://host.docker.internal:3000/health`
+          - Crawl4AI REST API: `http://host.docker.internal:11235` (`/health`, `/crawl`, `/md`, `/mcp/schema`)
+        - Note: Because `kits/antigravity` blocks `host.docker.internal` by default (Deny-First Precedence), use `sbxenv-crawl4ai-searxng.yaml`, `sbx run shell`/`opencode`, or run `./ci/init-network.sh --allow-host-services` on the host.

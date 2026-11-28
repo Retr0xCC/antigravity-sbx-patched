@@ -1,0 +1,25 @@
+# ========================================================
+# Docker Sandbox Environment for Local Crawl4AI & SearXNG MCP
+# Run with: sbx env run
+# Prerequisite on host: ./ci/init-network.sh --allow-host-services
+# ========================================================
+schemaVersion: "1"
+name: crawl4ai-searxng-workspace
+agent: shell
+workspace: .
+
+sandboxOptions:
+  template: ghcr.io/retr0xcc/antigravity-sbx-patched:latest
+  memory: 8gb
+  cpus: 4
+
+kits:
+  - ghcr.io/retr0xcc/crawl4ai-searxng-kit:latest
+
+env:
+  PYTHONUNBUFFERED: "1"
+  AGY_CLI_DISABLE_AUTO_UPDATE: "true"
+  GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+  SEARXNG_MCP_URL: "${SEARXNG_MCP_URL:-http://host.docker.internal:3000/mcp}"
+  CRAWL4AI_URL: "${CRAWL4AI_URL:-http://host.docker.internal:11235}"
+  CRAWL4AI_API_TOKEN: "${CRAWL4AI_API_TOKEN:-}"

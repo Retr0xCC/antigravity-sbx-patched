@@ -17,6 +17,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 LOCAL_DENY_TARGETS="localhost,*.local,*.internal,*.lan,*.home.arpa,host.docker.internal,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16"
+LOCAL_DENY_TARGETS_NO_HOST="localhost,*.local,*.lan,*.home.arpa,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8,169.254.0.0/16"
+HOST_SERVICES_ALLOW="host.docker.internal:3000,host.docker.internal:11235"
 
 usage() {
     cat <<EOF
@@ -29,18 +31,23 @@ Configures Docker Sandboxes network policy with native Internet-only egress:
 - Cloud instance metadata: DENIED (169.254.0.0/16)
 
 Options:
-    --global              Apply network policy globally to all sandboxes (default)
-    --sandbox <name>      Apply network policy scoped to a specific sandbox
-    --check, --status     Inspect current network policies (sbx policy ls)
-    --reset               Reset all custom policies (sbx policy reset)
-    -h, --help            Show this help message
+    --global                Apply network policy globally to all sandboxes (default)
+    --sandbox <name>        Apply network policy scoped to a specific sandbox
+    --allow-host-services   Permit host.docker.internal (for local SearXNG MCP :3000 & Crawl4AI :11235)
+                            while still blocking RFC 1918 LAN subnets, localhost, and metadata
+    --check, --status       Inspect current network policies (sbx policy ls)
+    --reset                 Reset all custom policies (sbx policy reset)
+    -h, --help              Show this help message
 
 Examples:
     # Initialize global policy for all sandboxes
     ./ci/init-network.sh
 
+    # Initialize global policy allowing local host MCP services (SearXNG + Crawl4AI)
+    ./ci/init-network.sh --allow-host-services
+
     # Apply policy to a specific sandbox
-    ./ci/init-network.sh --sandbox my-sandbox
+    ./ci/init-network.sh --sandbox my-sandbox --allow-host-services
 
     # Check active policies
     ./ci/init-network.sh --status
@@ -57,6 +64,7 @@ check_sbx() {
 
 SANDBOX_NAME=""
 MODE="global"
+ALLOW_HOST_SERVICES="false"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -72,6 +80,10 @@ while [[ $# -gt 0 ]]; do
             SANDBOX_NAME="$2"
             MODE="sandbox"
             shift 2
+            ;;
+        --allow-host-services)
+            ALLOW_HOST_SERVICES="true"
+            shift
             ;;
         --check|--status)
             MODE="check"
@@ -95,6 +107,11 @@ done
 
 check_sbx
 
+DENY_TARGETS="${LOCAL_DENY_TARGETS}"
+if [[ "${ALLOW_HOST_SERVICES}" == "true" ]]; then
+    DENY_TARGETS="${LOCAL_DENY_TARGETS_NO_HOST}"
+fi
+
 case "$MODE" in
     check)
         echo -e "${BLUE}==> Inspecting current Docker Sandboxes network policies...${NC}"
@@ -110,10 +127,17 @@ case "$MODE" in
         echo "  [1/2] Allowing outbound public internet egress..."
         sbx policy allow network --sandbox "${SANDBOX_NAME}" "*"
 
-        echo "  [2/2] Blocking local host, LAN subnets (RFC 1918), and cloud metadata..."
-        sbx policy deny network --sandbox "${SANDBOX_NAME}" "${LOCAL_DENY_TARGETS}"
+        if [[ "${ALLOW_HOST_SERVICES}" == "true" ]]; then
+            echo "  [*] Removing global/sandbox deny on host.docker.internal & *.internal (if present) and allowing host services..."
+            sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "host.docker.internal" >/dev/null 2>&1 || true
+            sbx policy rm network --sandbox "${SANDBOX_NAME}" --resource "*.internal" >/dev/null 2>&1 || true
+            sbx policy allow network --sandbox "${SANDBOX_NAME}" "${HOST_SERVICES_ALLOW}"
+        fi
 
-        echo -e "${GREEN}==> Successfully configured sandbox '${SANDBOX_NAME}' with Internet-only isolation.${NC}"
+        echo "  [2/2] Blocking local host, LAN subnets (RFC 1918), and cloud metadata..."
+        sbx policy deny network --sandbox "${SANDBOX_NAME}" "${DENY_TARGETS}"
+
+        echo -e "${GREEN}==> Successfully configured sandbox '${SANDBOX_NAME}'.${NC}"
         ;;
     global)
         echo -e "${BLUE}==> Initializing global Docker Sandboxes network policy (allow-all)...${NC}"
@@ -121,11 +145,23 @@ case "$MODE" in
             echo -e "${YELLOW}Note: 'sbx policy init' returned non-zero (policy may already be initialized). Continuing...${NC}"
         }
 
-        echo -e "${BLUE}==> Applying global deny rules for local network & cloud metadata...${NC}"
-        sbx policy deny network "${LOCAL_DENY_TARGETS}"
+        if [[ "${ALLOW_HOST_SERVICES}" == "true" ]]; then
+            echo -e "${BLUE}==> Removing existing deny rules for host.docker.internal & *.internal (if present)...${NC}"
+            sbx policy rm network --resource "host.docker.internal" >/dev/null 2>&1 || true
+            sbx policy rm network --resource "*.internal" >/dev/null 2>&1 || true
+            sbx policy allow network "${HOST_SERVICES_ALLOW}"
+        fi
 
-        echo -e "${GREEN}==> Successfully configured global Internet-only isolation for Docker Sandboxes.${NC}"
+        echo -e "${BLUE}==> Applying global deny rules for local network & cloud metadata...${NC}"
+        sbx policy deny network "${DENY_TARGETS}"
+
+        echo -e "${GREEN}==> Successfully configured global Docker Sandboxes network isolation.${NC}"
         echo "    Public Internet: ALLOWED (*)"
-        echo "    Local LAN / Private IPs / Host / Metadata: BLOCKED"
+        if [[ "${ALLOW_HOST_SERVICES}" == "true" ]]; then
+            echo "    Host Services (host.docker.internal): ALLOWED (${HOST_SERVICES_ALLOW})"
+            echo "    Local LAN / Private IPs / Loopback / Metadata: BLOCKED"
+        else
+            echo "    Local LAN / Private IPs / Host / Metadata: BLOCKED"
+        fi
         ;;
 esac
